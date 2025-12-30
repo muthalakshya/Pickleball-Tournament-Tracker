@@ -1,122 +1,113 @@
-import User from '../models/User.js';
+/**
+ * Authentication Controller
+ * 
+ * This file contains controller functions for authentication endpoints.
+ * Handles admin login and JWT token generation.
+ * 
+ * Security considerations:
+ * - No registration endpoint - admins must be created manually
+ * - Passwords are never returned in responses
+ * - JWT tokens have expiration times
+ * - Generic error messages prevent user enumeration attacks
+ */
+
+import jwt from 'jsonwebtoken';
+import Admin from '../models/admin.model.js';
 
 /**
- * @desc    Register new organizer
- * @route   POST /api/auth/register
- * @access  Public
+ * Generate JWT Token
+ * 
+ * Creates a JSON Web Token for authenticated admin users.
+ * 
+ * Security decision: We use a short expiration time (24 hours) to limit
+ * the window of opportunity if a token is compromised. The token contains
+ * only the admin ID and role - no sensitive information.
+ * 
+ * @param {string} adminId - MongoDB ObjectId of the admin
+ * @returns {string} - JWT token
  */
-export const register = async (req, res, next) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists',
-      });
-    }
-
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: 'organizer',
-    });
-
-    // Generate token
-    const token = user.getSignedJwtToken();
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
+const generateToken = (adminId) => {
+  return jwt.sign(
+    { id: adminId, role: 'admin' },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' } // Token expires in 24 hours
+  );
 };
 
 /**
- * @desc    Login organizer
- * @route   POST /api/auth/login
- * @access  Public
+ * Admin Login Controller
+ * 
+ * Authenticates an admin user by verifying email and password.
+ * Returns a JWT token upon successful authentication.
+ * 
+ * Security decisions:
+ * 1. Generic error message for invalid credentials prevents user enumeration
+ * 2. Password is not included in response (select: false in model)
+ * 3. Token is only issued after successful password verification
+ * 4. Uses bcrypt.compare which is resistant to timing attacks
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
  */
-export const login = async (req, res, next) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email & password
+    // Validate input
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password',
+        message: 'Email and password are required'
       });
     }
 
-    // Check for user
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
+    // Find admin by email and include password field (normally excluded)
+    // Security: We explicitly select password here for comparison
+    const admin = await Admin.findOne({ email: email.toLowerCase() }).select('+password');
+
+    // Generic error message to prevent user enumeration
+    // Don't reveal whether email exists or password is wrong
+    if (!admin) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid email or password'
       });
     }
 
-    // Check if password matches
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
+    // Compare provided password with hashed password in database
+    // Security: bcrypt.compare handles timing attacks internally
+    const isPasswordValid = await admin.comparePassword(password);
+
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid email or password'
       });
     }
 
-    // Generate token
-    const token = user.getSignedJwtToken();
+    // Generate JWT token
+    const token = generateToken(admin._id);
 
+    // Return success response with token
+    // Security: Never return password or sensitive admin data
     res.status(200).json({
       success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      message: 'Login successful',
+      token: token,
+      admin: {
+        id: admin._id,
+        email: admin.email,
+        role: admin.role
+      }
     });
+
   } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Get current logged in user
- * @route   GET /api/auth/me
- * @access  Private
- */
-export const getMe = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id);
-
-    res.status(200).json({
-      success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during authentication'
     });
-  } catch (error) {
-    next(error);
   }
 };
 

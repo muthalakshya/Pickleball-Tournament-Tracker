@@ -1,0 +1,16 @@
+/**
+ * Sockets Directory
+ * 
+ * This directory will contain WebSocket/Socket.io related files.
+ * WebSockets enable real-time bidirectional communication between
+ * the server and clients, which is essential for live tournament updates.
+ * 
+ * Socket files typically include:
+ * - Socket.io server setup and configuration
+ * - Socket event handlers (connection, disconnection, custom events)
+ * - Real-time tournament updates
+ * - Live score broadcasting
+ * - Match status notifications
+ * - Room/namespace management for tournaments
+ */
+

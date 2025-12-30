@@ -1,0 +1,17 @@
+/**
+ * Middlewares Directory
+ * 
+ * This directory will contain custom Express middleware functions.
+ * Middleware functions execute during the request-response cycle and can
+ * modify requests, responses, or terminate the request cycle.
+ * 
+ * Middlewares typically include:
+ * - Authentication middleware (JWT verification, session validation)
+ * - Authorization middleware (role-based access control)
+ * - Request validation middleware
+ * - Error handling middleware
+ * - Logging middleware
+ * - Rate limiting middleware
+ * - CORS configuration
+ */
+

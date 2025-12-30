@@ -1,0 +1,13 @@
+/**
+ * Models Directory
+ * 
+ * This directory will contain data models and schemas.
+ * Models define the structure and validation rules for data entities
+ * such as Tournaments, Matches, Players, Scores, etc.
+ * 
+ * Models typically include:
+ * - Database schemas (if using an ORM like Mongoose, Sequelize, Prisma)
+ * - Data validation rules
+ * - Model methods for data manipulation
+ */
+

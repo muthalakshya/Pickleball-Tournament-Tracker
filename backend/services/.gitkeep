@@ -1,0 +1,17 @@
+/**
+ * Services Directory
+ * 
+ * This directory will contain business logic and service layer functions.
+ * Services handle complex operations that may involve multiple models or
+ * external API calls.
+ * 
+ * Services typically include:
+ * - Business logic that doesn't belong in controllers
+ * - Data processing and transformation
+ * - Integration with external APIs
+ * - Complex database queries
+ * - Tournament management logic
+ * - Score calculation services
+ * - Fixture generation services
+ */
+

@@ -1,74 +1,104 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { useAuthStore } from './store/authStore';
-
-// Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import TournamentSetup from './pages/TournamentSetup';
-import MatchControl from './pages/MatchControl';
-import PublicTournamentView from './pages/PublicTournamentView';
-
-// Components
-import PrivateRoute from './components/PrivateRoute';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
+import Home from './pages/Home'
+import TournamentView from './pages/TournamentView'
+import MatchList from './pages/MatchList'
+import BracketView from './pages/BracketView'
+import StandingsView from './pages/StandingsView'
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import TournamentEditor from './pages/admin/TournamentEditor'
+import MatchController from './pages/admin/MatchController'
+import ParticipantsManagement from './pages/admin/ParticipantsManagement'
+import FixturesManagement from './pages/admin/FixturesManagement'
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
-
   return (
-    <div className="min-h-screen bg-background">
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />}
-        />
-        <Route path="/tournament/:id/public" element={<PublicTournamentView />} />
-
-        {/* Protected routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/tournament/new"
-          element={
-            <PrivateRoute>
-              <TournamentSetup />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/tournament/:id/edit"
-          element={
-            <PrivateRoute>
-              <TournamentSetup />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/tournament/:id/matches"
-          element={
-            <PrivateRoute>
-              <MatchControl />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Default redirect */}
-        <Route
-          path="/"
-          element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} />}
-        />
-      </Routes>
-      <Toaster position="top-right" />
-    </div>
-  );
+    <AuthProvider>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/tournament/:id" element={<Layout><TournamentView /></Layout>} />
+          <Route path="/tournament/:id/matches" element={<Layout><MatchList /></Layout>} />
+          <Route path="/tournament/:id/bracket" element={<Layout><BracketView /></Layout>} />
+          <Route path="/tournament/:id/standings" element={<Layout><StandingsView /></Layout>} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/new"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TournamentEditor />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* More specific routes must come before the general :id route */}
+          <Route
+            path="/admin/tournaments/:id/participants"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ParticipantsManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/:id/fixtures"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FixturesManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/:id/matches"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MatchController />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TournamentEditor />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  )
 }
 
-export default App;
+export default App
 

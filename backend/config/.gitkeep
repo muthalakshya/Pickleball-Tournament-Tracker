@@ -1,0 +1,15 @@
+/**
+ * Config Directory
+ * 
+ * This directory will contain configuration files and settings.
+ * Configuration files centralize environment-specific settings and
+ * application constants.
+ * 
+ * Config files typically include:
+ * - Database connection configuration
+ * - API keys and secrets management
+ * - Application constants
+ * - Environment-specific settings
+ * - Third-party service configurations
+ */
+
