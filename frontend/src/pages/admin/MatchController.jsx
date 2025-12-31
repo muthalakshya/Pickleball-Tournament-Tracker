@@ -143,12 +143,14 @@ const MatchController = () => {
 
   const handleCreateMatch = async () => {
     try {
-      if (!matchForm.round || !matchForm.participantA || !matchForm.participantB) {
-        alert('Please fill in all required fields')
+      if (!matchForm.round) {
+        alert('Please fill in the round field')
         return
       }
 
-      if (matchForm.participantA === matchForm.participantB) {
+      // Allow TBD (null) participants for knockout brackets
+      // But if both are set, they must be different
+      if (matchForm.participantA && matchForm.participantB && matchForm.participantA === matchForm.participantB) {
         alert('Participants must be different')
         return
       }
@@ -173,12 +175,14 @@ const MatchController = () => {
 
   const handleUpdateMatch = async () => {
     try {
-      if (!matchForm.round || !matchForm.participantA || !matchForm.participantB) {
-        alert('Please fill in all required fields')
+      if (!matchForm.round) {
+        alert('Please fill in the round field')
         return
       }
 
-      if (matchForm.participantA === matchForm.participantB) {
+      // Allow TBD (null) participants for knockout brackets
+      // But if both are set, they must be different
+      if (matchForm.participantA && matchForm.participantB && matchForm.participantA === matchForm.participantB) {
         alert('Participants must be different')
         return
       }
@@ -253,8 +257,8 @@ const MatchController = () => {
         <div className="space-y-3 mb-4">
           <div className="flex justify-between items-center">
             <div className="flex-1">
-              <p className="font-semibold text-navy-blue">
-                {match.participantA?.name || 'TBD'}
+              <p className={`font-semibold ${!match.participantA ? 'text-gray-400 italic' : 'text-navy-blue'}`}>
+                {match.participantA?.name || 'TBD (To Be Declared)'}
               </p>
               {match.participantA?.players && (
                 <p className="text-sm text-gray-600">
@@ -269,8 +273,8 @@ const MatchController = () => {
 
           <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
             <div className="flex-1">
-              <p className="font-semibold text-navy-blue">
-                {match.participantB?.name || 'TBD'}
+              <p className={`font-semibold ${!match.participantB ? 'text-gray-400 italic' : 'text-navy-blue'}`}>
+                {match.participantB?.name || 'TBD (To Be Declared)'}
               </p>
               {match.participantB?.players && (
                 <p className="text-sm text-gray-600">
@@ -481,10 +485,10 @@ const MatchController = () => {
                 </label>
                 <select
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-lime-green focus:border-lime-green"
-                  value={matchForm.participantA}
-                  onChange={(e) => setMatchForm({ ...matchForm, participantA: e.target.value })}
+                  value={matchForm.participantA || ''}
+                  onChange={(e) => setMatchForm({ ...matchForm, participantA: e.target.value || null })}
                 >
-                  <option value="">Select Participant A</option>
+                  <option value="">TBD (To Be Declared)</option>
                   {participants.map((p) => (
                     <option key={p._id} value={p._id}>
                       {p.name} {p.players && p.players.length > 0 && `(${p.players.join(' & ')})`}
@@ -498,10 +502,10 @@ const MatchController = () => {
                 </label>
                 <select
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-lime-green focus:border-lime-green"
-                  value={matchForm.participantB}
-                  onChange={(e) => setMatchForm({ ...matchForm, participantB: e.target.value })}
+                  value={matchForm.participantB || ''}
+                  onChange={(e) => setMatchForm({ ...matchForm, participantB: e.target.value || null })}
                 >
-                  <option value="">Select Participant B</option>
+                  <option value="">TBD (To Be Declared)</option>
                   {participants.map((p) => (
                     <option key={p._id} value={p._id}>
                       {p.name} {p.players && p.players.length > 0 && `(${p.players.join(' & ')})`}

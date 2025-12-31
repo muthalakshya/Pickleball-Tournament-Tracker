@@ -62,11 +62,11 @@ const Layout = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-navy-blue text-white mt-auto py-6">
+      {/* <footer className="bg-navy-blue text-white mt-auto py-6">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-cream">© 2024 Pickleball Tournament. All rights reserved.</p>
+          <p className="text-cream">© 2025 Pickleball Tournament. All rights reserved.</p>
         </div>
-      </footer>
+      </footer> */}
     </div>
   )
 }

@@ -30,12 +30,14 @@ const matchSchema = new mongoose.Schema(
     participantA: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Participant',
-      required: [true, 'Participant A is required']
+      required: false, // Can be null for TBD (To Be Declared) in knockout brackets
+      default: null
     },
     participantB: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Participant',
-      required: [true, 'Participant B is required']
+      required: false, // Can be null for TBD (To Be Declared) in knockout brackets
+      default: null
     },
     score: {
       a: {

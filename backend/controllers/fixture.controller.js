@@ -63,11 +63,12 @@ export const generateTournamentFixtures = async (req, res) => {
       });
     }
 
-    // Validation: Tournament must be in draft status to generate fixtures
-    if (tournament.status !== 'draft') {
+    // Validation: Fixtures can only be generated before tournament goes live
+    // Admin override only allowed before tournament goes live
+    if (tournament.status === 'live' || tournament.status === 'completed') {
       return res.status(400).json({
         success: false,
-        message: 'Fixtures can only be generated for tournaments in draft status'
+        message: 'Fixtures can only be generated for tournaments in draft status. Cannot modify fixtures once tournament is live or completed.'
       });
     }
 
@@ -121,11 +122,12 @@ export const generateTournamentFixtures = async (req, res) => {
     }
 
     // Transform matches for database insertion
+    // Note: For knockout, some matches may have null participants (TBD)
     const matchesToCreate = generatedMatches.map(match => ({
       tournamentId: id,
       round: match.round,
-      participantA: match.participantA,
-      participantB: match.participantB,
+      participantA: match.participantA || null, // Can be null for TBD in knockout
+      participantB: match.participantB || null, // Can be null for TBD in knockout
       score: {
         a: 0,
         b: 0

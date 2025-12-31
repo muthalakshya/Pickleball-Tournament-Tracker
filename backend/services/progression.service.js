@@ -358,19 +358,44 @@ export const processMatchCompletion = async (matchId) => {
   const roundComplete = await isRoundComplete(tournament._id, match.round);
   progression.roundComplete = roundComplete;
 
-  // If round is complete and it's a knockout tournament, generate next round
+  // If round is complete and it's a knockout tournament, auto-fill TBD participants in next round
   if (roundComplete && tournament.format === 'knockout') {
     const nextRound = getNextRoundName(match.round);
 
     if (nextRound) {
-      // Check if next round matches already exist
-      const existingNextRound = await Match.countDocuments({
+      // Get all winners from completed round
+      const winners = await getRoundWinners(tournament._id, match.round);
+
+      // Get next round matches (they should already exist with TBD/null participants)
+      const nextRoundMatches = await Match.find({
         tournamentId: tournament._id,
         round: nextRound
-      });
+      }).sort({ order: 1 });
 
-      if (existingNextRound === 0) {
-        // Generate next round matches
+      if (nextRoundMatches.length > 0) {
+        // Auto-fill TBD participants with winners
+        let winnerIndex = 0;
+        
+        for (const nextMatch of nextRoundMatches) {
+          // Fill participantA if it's null (TBD)
+          if (!nextMatch.participantA && winnerIndex < winners.length) {
+            nextMatch.participantA = winners[winnerIndex++];
+            await nextMatch.save();
+          }
+          
+          // Fill participantB if it's null (TBD)
+          if (!nextMatch.participantB && winnerIndex < winners.length) {
+            nextMatch.participantB = winners[winnerIndex++];
+            await nextMatch.save();
+          }
+        }
+
+        progression.nextRoundFilled = true;
+        progression.filledMatches = nextRoundMatches.length;
+        progression.updatedRounds.push(nextRound);
+      } else {
+        // Next round matches don't exist - this shouldn't happen with new fixture generation
+        // But keep old behavior as fallback
         const newMatches = await generateNextRoundMatches(
           tournament._id,
           match.round,

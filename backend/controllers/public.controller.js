@@ -12,6 +12,7 @@ import mongoose from 'mongoose';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Participant from '../models/participant.model.js';
+import { calculateStandings, sortStandings } from '../services/standings.service.js';
 
 /**
  * Get All Public Tournaments
@@ -242,74 +243,10 @@ export const getTournamentStandings = async (req, res) => {
       .lean();
 
     // Calculate standings for each participant
-    const standings = participants.map(participant => {
-      let wins = 0;
-      let losses = 0;
-      let pointsFor = 0;
-      let pointsAgainst = 0;
-      let matchesPlayed = 0;
+    let standings = calculateStandings(participants, completedMatches);
 
-      // Process all matches involving this participant
-      completedMatches.forEach(match => {
-        const isParticipantA = match.participantA._id.toString() === participant._id.toString();
-        const isParticipantB = match.participantB._id.toString() === participant._id.toString();
-
-        if (isParticipantA || isParticipantB) {
-          matchesPlayed++;
-          const participantScore = isParticipantA ? match.score.a : match.score.b;
-          const opponentScore = isParticipantA ? match.score.b : match.score.a;
-
-          pointsFor += participantScore;
-          pointsAgainst += opponentScore;
-
-          if (participantScore > opponentScore) {
-            wins++;
-          } else {
-            losses++;
-          }
-        }
-      });
-
-      // Calculate win rate
-      const winRate = matchesPlayed > 0 ? (wins / matchesPlayed * 100).toFixed(1) : 0;
-      const pointDifference = pointsFor - pointsAgainst;
-
-      return {
-        participant: {
-          id: participant._id,
-          name: participant.name,
-          players: participant.players
-        },
-        stats: {
-          matchesPlayed,
-          wins,
-          losses,
-          pointsFor,
-          pointsAgainst,
-          pointDifference,
-          winRate: parseFloat(winRate)
-        }
-      };
-    });
-
-    // Sort standings by:
-    // 1. Wins (descending)
-    // 2. Point difference (descending)
-    // 3. Points for (descending)
-    standings.sort((a, b) => {
-      if (b.stats.wins !== a.stats.wins) {
-        return b.stats.wins - a.stats.wins;
-      }
-      if (b.stats.pointDifference !== a.stats.pointDifference) {
-        return b.stats.pointDifference - a.stats.pointDifference;
-      }
-      return b.stats.pointsFor - a.stats.pointsFor;
-    });
-
-    // Add position/rank to each standing
-    standings.forEach((standing, index) => {
-      standing.position = index + 1;
-    });
+    // Sort standings with tie-breaking rules (includes head-to-head)
+    standings = sortStandings(standings, completedMatches);
 
     res.status(200).json({
       success: true,

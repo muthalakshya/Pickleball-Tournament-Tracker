@@ -67,6 +67,17 @@ export const updateMatchScore = async (req, res) => {
       });
     }
 
+    // Validation: Admin override only allowed before tournament goes live
+    if (tournament.status === 'live' || tournament.status === 'completed') {
+      // For live/completed tournaments, only allow score updates for live matches
+      if (match.status !== 'live' && status !== 'live') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot edit matches in live/completed tournaments. Only live matches can be updated.'
+        });
+      }
+    }
+
     // Check if round is locked (for knockout tournaments)
     const roundLocked = await isRoundLocked(tournament._id, match.round);
     if (roundLocked) {
@@ -518,6 +529,14 @@ export const createMatch = async (req, res) => {
       });
     }
 
+    // Validation: Admin override only allowed before tournament goes live
+    if (tournament.status === 'live' || tournament.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create matches in live/completed tournaments. Only draft tournaments allow manual match creation.'
+      });
+    }
+
     // Verify participants belong to this tournament
     const participants = await Participant.find({
       _id: { $in: [participantA, participantB] },
@@ -615,6 +634,20 @@ export const updateMatch = async (req, res) => {
       });
     }
 
+    // Validation: Admin override only allowed before tournament goes live
+    // For live/completed tournaments, only allow score updates for live matches
+    if (tournament.status === 'live' || tournament.status === 'completed') {
+      if (match.status !== 'live' && status !== 'live') {
+        // Allow updating participants/round only if match is not completed and tournament is draft
+        if (match.status === 'completed' || (participantA !== undefined || participantB !== undefined || round !== undefined)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot edit match details in live/completed tournaments. Only live match scores can be updated.'
+          });
+        }
+      }
+    }
+
     // Check if round is locked (for knockout tournaments)
     if (match.status === 'completed') {
       const roundLocked = await isRoundLocked(tournament._id, match.round);
@@ -641,28 +674,42 @@ export const updateMatch = async (req, res) => {
     if (order !== undefined) match.order = order;
 
     // Update participants if provided
+    // Allow null participants for TBD (To Be Declared) in knockout brackets
     if (participantA !== undefined || participantB !== undefined) {
       if (participantA !== undefined) {
-        if (!mongoose.Types.ObjectId.isValid(participantA)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid participantA ID format'
-          });
+        // Allow null for TBD, otherwise validate ObjectId
+        if (participantA !== null && participantA !== '') {
+          if (!mongoose.Types.ObjectId.isValid(participantA)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid participantA ID format'
+            });
+          }
+          match.participantA = participantA;
+        } else {
+          // Set to null for TBD
+          match.participantA = null;
         }
-        match.participantA = participantA;
       }
       if (participantB !== undefined) {
-        if (!mongoose.Types.ObjectId.isValid(participantB)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid participantB ID format'
-          });
+        // Allow null for TBD, otherwise validate ObjectId
+        if (participantB !== null && participantB !== '') {
+          if (!mongoose.Types.ObjectId.isValid(participantB)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid participantB ID format'
+            });
+          }
+          match.participantB = participantB;
+        } else {
+          // Set to null for TBD
+          match.participantB = null;
         }
-        match.participantB = participantB;
       }
 
-      // Validate participants are different
-      if (match.participantA.toString() === match.participantB.toString()) {
+      // Validate participants are different (only if both are not null)
+      if (match.participantA && match.participantB && 
+          match.participantA.toString() === match.participantB.toString()) {
         return res.status(400).json({
           success: false,
           message: 'Participant A and Participant B must be different'
@@ -767,6 +814,14 @@ export const deleteMatch = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to delete this match'
+      });
+    }
+
+    // Validation: Admin override only allowed before tournament goes live
+    if (tournament.status === 'live' || tournament.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete matches in live/completed tournaments. Only draft tournaments allow match deletion.'
       });
     }
 
