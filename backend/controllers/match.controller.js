@@ -10,11 +10,6 @@ import Match from '../models/match.model.js';
 import Tournament from '../models/tournament.model.js';
 import Participant from '../models/participant.model.js';
 import { processMatchCompletion, isRoundLocked, getMatchWinner } from '../services/progression.service.js';
-import {
-  emitMatchStarted,
-  emitScoreUpdated,
-  emitMatchCompleted
-} from '../services/socket.service.js';
 
 /**
  * Update Match Score
@@ -110,11 +105,6 @@ export const updateMatchScore = async (req, res) => {
       });
     }
 
-    // Track status change for socket events
-    const previousStatus = match.status;
-    const statusChanged = status !== undefined && status !== previousStatus;
-    const scoreChanged = scoreA !== undefined || scoreB !== undefined;
-
     // Update match
     if (scoreA !== undefined) match.score.a = scoreA;
     if (scoreB !== undefined) match.score.b = scoreB;
@@ -123,42 +113,11 @@ export const updateMatchScore = async (req, res) => {
 
     await match.save();
 
-    // Populate match data for socket events
-    const populatedMatch = await Match.findById(match._id)
-      .populate('participantA', 'name players')
-      .populate('participantB', 'name players')
-      .populate('tournamentId', 'name format type')
-      .lean();
-
-    // Emit socket events
-    try {
-      // Emit match_started if status changed to live
-      if (statusChanged && match.status === 'live') {
-        await emitMatchStarted(match._id, populatedMatch);
-      }
-
-      // Emit score_updated if score changed
-      if (scoreChanged) {
-        await emitScoreUpdated(match._id, populatedMatch);
-      }
-    } catch (error) {
-      console.error('Error emitting socket events:', error);
-      // Don't fail the request if socket emission fails
-    }
-
     // If match is being completed, process tournament progression
     let progression = null;
     if (status === 'completed' && match.status === 'completed') {
       try {
         progression = await processMatchCompletion(match._id);
-        
-        // Emit match_completed event
-        const winner = getMatchWinner(match);
-        const winnerData = winner ? (winner.toString() === match.participantA.toString()
-          ? populatedMatch.participantA
-          : populatedMatch.participantB) : null;
-        
-        await emitMatchCompleted(match._id, populatedMatch, winnerData, progression);
       } catch (error) {
         console.error('Error processing match completion:', error);
         // Don't fail the request, just log the error
@@ -270,7 +229,7 @@ export const completeMatch = async (req, res) => {
     // Process tournament progression
     const progression = await processMatchCompletion(match._id);
 
-    // Populate match data for response and socket events
+    // Populate match data for response
     const populatedMatch = await Match.findById(match._id)
       .populate('participantA', 'name players')
       .populate('participantB', 'name players')
@@ -282,14 +241,6 @@ export const completeMatch = async (req, res) => {
     const winnerData = winner ? (winner.toString() === match.participantA.toString() 
       ? populatedMatch.participantA 
       : populatedMatch.participantB) : null;
-
-    // Emit match_completed socket event
-    try {
-      await emitMatchCompleted(match._id, populatedMatch, winnerData, progression);
-    } catch (error) {
-      console.error('Error emitting match_completed event:', error);
-      // Don't fail the request if socket emission fails
-    }
 
     res.status(200).json({
       success: true,

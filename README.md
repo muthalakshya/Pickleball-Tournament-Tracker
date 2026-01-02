@@ -112,3 +112,17 @@ To create an admin user for the first time:
 - API endpoints and frontend routes will be documented as development progresses
 - Admin accounts must be created manually using the script (no registration endpoint)
 
+## Deployment
+
+### Vercel Deployment
+
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions.
+
+**Quick Start:**
+1. Deploy frontend to Vercel (recommended)
+2. Deploy backend to Railway/Render (for Socket.IO support)
+3. Set environment variables
+4. Create admin user
+
+**Note:** Socket.IO has limitations with Vercel serverless functions. For production, deploy the backend to a platform that supports persistent connections (Railway, Render, etc.).
+

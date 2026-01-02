@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
                     >
                       Tournaments
                     </Link>
-                    {!isAdminRoute && (
+                    {/* {!isAdminRoute && (
                       <Link 
                         to="/admin/login" 
                         onClick={scrollToTop}
@@ -85,7 +85,7 @@ const Layout = ({ children }) => {
                       >
                         Admin Login
                       </Link>
-                    )}
+                    )} */}
                   </>
                 )}
               </nav>

@@ -14,7 +14,6 @@
 import mongoose from 'mongoose';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
-import { emitTournamentLive } from '../services/socket.service.js';
 
 /**
  * Create Tournament
@@ -565,15 +564,6 @@ export const updateTournamentStatus = async (req, res) => {
 
     await tournament.save();
 
-    // Emit socket event if tournament is going live
-    if (status === 'live') {
-      try {
-        await emitTournamentLive(tournament._id, tournament.toObject());
-      } catch (error) {
-        console.error('Error emitting tournament_live event:', error);
-        // Don't fail the request if socket emission fails
-      }
-    }
 
     res.status(200).json({
       success: true,

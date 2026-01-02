@@ -9,13 +9,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { createServer } from 'http';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import { connectDB } from './config/db.js';
-import { initializeSocketIO } from './sockets/socket.io.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -85,19 +83,16 @@ app.use('*', (req, res) => {
   });
 });
 
-// Create HTTP server for Socket.IO
-const httpServer = createServer(app);
+// Only start the server if not in Vercel serverless environment
+// Vercel will handle the serverless function execution
+if (process.env.VERCEL !== '1') {
+  // Start the server
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`📡 Health check available at http://localhost:${PORT}/api/health`);
+  });
+}
 
-// Initialize Socket.IO
-initializeSocketIO(httpServer);
-
-// Start the server
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📡 Health check available at http://localhost:${PORT}/api/health`);
-  console.log(`🔌 Socket.IO server ready for real-time updates`);
-});
-
-// Export app for testing purposes
+// Export app for testing and Vercel serverless functions
 export default app;
 
