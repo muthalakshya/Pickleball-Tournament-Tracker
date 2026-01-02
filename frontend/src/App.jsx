@@ -9,18 +9,13 @@ import BracketView from './pages/BracketView'
 import StandingsView from './pages/StandingsView'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
-import TournamentEditor from './pages/admin/TournamentEditor'
 import CustomTournamentCreator from './pages/admin/CustomTournamentCreator'
-import CustomTournamentsList from './pages/admin/CustomTournamentsList'
 import CustomTournamentsViewAll from './pages/admin/CustomTournamentsViewAll'
-import CustomTournamentManage from './pages/admin/CustomTournamentManage'
 import CustomTournamentManagePage from './pages/admin/CustomTournamentManagePage'
 import CustomFixtureGenerator from './pages/admin/CustomFixtureGenerator'
 import GroupTournamentWizard from './pages/admin/GroupTournamentWizard'
 import CustomTournamentMatches from './pages/admin/CustomTournamentMatches'
-import MatchController from './pages/admin/MatchController'
-import ParticipantsManagement from './pages/admin/ParticipantsManagement'
-import FixturesManagement from './pages/admin/FixturesManagement'
+import CustomMatchManager from './pages/admin/CustomMatchManager'
 
 function App() {
   return (
@@ -47,16 +42,6 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <AdminDashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/tournaments/new"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TournamentEditor />
                 </Layout>
               </ProtectedRoute>
             }
@@ -103,16 +88,6 @@ function App() {
           />
           {/* More specific routes must come before the general :id route */}
           <Route
-            path="/admin/tournaments/:id/participants"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <ParticipantsManagement />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/admin/tournaments/custom/:id/setup"
             element={
               <ProtectedRoute>
@@ -143,36 +118,6 @@ function App() {
             }
           />
           <Route
-            path="/admin/tournaments/:id/manage"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <CustomTournamentManage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route // New dedicated route for managing custom tournaments
-            path="/admin/tournaments/custom/:id/manage"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <CustomTournamentManagePage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/tournaments/:id/fixtures"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <CustomFixtureGenerator />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/admin/tournaments/custom/:id/matches"
             element={
               <ProtectedRoute>
@@ -183,21 +128,11 @@ function App() {
             }
           />
           <Route
-            path="/admin/tournaments/:id/matches"
+            path="/admin/tournaments/custom/:id/matches/manage"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <MatchController />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/tournaments/:id"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TournamentEditor />
+                  <CustomMatchManager />
                 </Layout>
               </ProtectedRoute>
             }

@@ -12,7 +12,7 @@ import mongoose from 'mongoose';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Participant from '../models/participant.model.js';
-import { calculateStandings, sortStandings } from '../services/standings.service.js';
+import { calculateStandings, sortStandings, calculateGroupStandings as calcGroupStandings } from '../services/standings.service.js';
 
 /**
  * Get All Public Tournaments
@@ -68,13 +68,11 @@ export const getTournamentById = async (req, res) => {
       });
     }
 
-    // Find tournament only if it's public
+    // Query only public tournaments
     const tournament = await Tournament.findOne({
       _id: id,
       isPublic: true
-    })
-      .select('-createdBy') // Exclude admin info
-      .lean();
+    }).select('-createdBy').lean();
 
     if (!tournament) {
       return res.status(404).json({
@@ -274,3 +272,112 @@ export const getTournamentStandings = async (req, res) => {
   }
 };
 
+/**
+ * Get Tournament Group Standings
+ * 
+ * Returns group-wise standings for tournaments with group stages.
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getTournamentGroupStandings = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate MongoDB ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tournament ID format'
+      });
+    }
+
+    // Verify tournament exists and is public
+    const tournament = await Tournament.findOne({
+      _id: id,
+      isPublic: true
+    }).lean();
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found or not publicly available'
+      });
+    }
+
+    // Get all participants for this tournament
+    const participants = await Participant.find({ tournamentId: id })
+      .sort({ name: 1 })
+      .lean();
+
+    // Get all group stage matches
+    const groupMatches = await Match.find({
+      tournamentId: id,
+      round: { $regex: /^Group / },
+      status: 'completed'
+    })
+      .populate('participantA', 'name players')
+      .populate('participantB', 'name players')
+      .lean();
+
+    // Group matches by group name
+    const matchesByGroup = {};
+    groupMatches.forEach(match => {
+      const groupName = match.round; // e.g., "Group A"
+      if (!matchesByGroup[groupName]) {
+        matchesByGroup[groupName] = [];
+      }
+      matchesByGroup[groupName].push(match);
+    });
+
+    // Calculate standings for each group
+    const groupStandings = [];
+    Object.keys(matchesByGroup).sort().forEach(groupName => {
+      const groupMatchesList = matchesByGroup[groupName];
+      
+      // Get participants in this group
+      const groupParticipantIds = new Set();
+      groupMatchesList.forEach(match => {
+        if (match.participantA) groupParticipantIds.add(match.participantA._id.toString());
+        if (match.participantB) groupParticipantIds.add(match.participantB._id.toString());
+      });
+
+      const groupParticipants = participants.filter(p => 
+        groupParticipantIds.has(p._id.toString())
+      );
+
+      // Calculate standings for this group
+      let standings = calculateStandings(groupParticipants, groupMatchesList);
+      standings = sortStandings(standings, groupMatchesList);
+
+      groupStandings.push({
+        groupName: groupName.replace('Group ', ''),
+        fullGroupName: groupName,
+        standings: standings
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      tournament: {
+        id: tournament._id,
+        name: tournament.name,
+        format: tournament.format,
+        status: tournament.status,
+        currentRound: tournament.currentRound
+      },
+      groupStandings: groupStandings,
+      summary: {
+        totalGroups: groupStandings.length,
+        totalParticipants: participants.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching group standings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching group standings',
+      error: error.message
+    });
+  }
+};

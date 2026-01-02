@@ -27,24 +27,24 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-cream flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         <div>
           <img
-            className="mx-auto h-16 w-auto"
+            className="mx-auto h-12 sm:h-16 w-auto"
             src="https://res.cloudinary.com/dacuzjrcg/image/upload/v1757493607/Logo_with_text_h9ypxu.png"
             alt="Sour Pickle Logo"
           />
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-navy-blue">
+          <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-navy-blue">
             Admin Login
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Sign in to manage tournaments
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded text-sm sm:text-base">
               {error}
             </div>
           )}
@@ -59,7 +59,7 @@ const AdminLogin = () => {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-navy-blue rounded-t-md focus:outline-none focus:ring-lime-green focus:border-lime-green focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 placeholder-gray-500 text-navy-blue rounded-t-md focus:outline-none focus:ring-lime-green focus:border-lime-green focus:z-10 text-sm sm:text-base"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -75,7 +75,7 @@ const AdminLogin = () => {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-navy-blue rounded-b-md focus:outline-none focus:ring-lime-green focus:border-lime-green focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 placeholder-gray-500 text-navy-blue rounded-b-md focus:outline-none focus:ring-lime-green focus:border-lime-green focus:z-10 text-sm sm:text-base"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -87,7 +87,7 @@ const AdminLogin = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-navy-blue bg-lime-green hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-green disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2 sm:py-3 px-4 border border-transparent text-sm sm:text-base font-medium rounded-md text-navy-blue bg-lime-green hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-green disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -99,4 +99,3 @@ const AdminLogin = () => {
 }
 
 export default AdminLogin
-

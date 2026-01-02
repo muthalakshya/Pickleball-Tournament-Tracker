@@ -14,7 +14,8 @@ import {
   getAllTournaments,
   getTournamentById,
   getTournamentMatches,
-  getTournamentStandings
+  getTournamentStandings,
+  getTournamentGroupStandings
 } from '../controllers/public.controller.js';
 
 // Create router instance
@@ -86,6 +87,27 @@ router.get('/tournaments/:id/matches', getTournamentMatches);
  * }
  */
 router.get('/tournaments/:id/standings', getTournamentStandings);
+
+/**
+ * GET /api/public/tournaments/:id/group-standings
+ * 
+ * Get group-wise standings for tournaments with group stages.
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "tournament": {...},
+ *   "groupStandings": [
+ *     {
+ *       "groupName": "A",
+ *       "fullGroupName": "Group A",
+ *       "standings": [...]
+ *     }
+ *   ],
+ *   "summary": {...}
+ * }
+ */
+router.get('/tournaments/:id/group-standings', getTournamentGroupStandings);
 
 // Export router to be used in server.js
 export default router;

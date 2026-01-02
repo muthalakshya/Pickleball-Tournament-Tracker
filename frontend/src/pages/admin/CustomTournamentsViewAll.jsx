@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { adminAPI } from '../../services/api'
+import { scrollToTop } from '../../utils/scrollToTop'
 
 const CustomTournamentsViewAll = () => {
   const location = useLocation()
@@ -8,13 +9,12 @@ const CustomTournamentsViewAll = () => {
   const [tournaments, setTournaments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [sortBy, setSortBy] = useState('date') // 'date', 'name', 'status'
-  const [filterStatus, setFilterStatus] = useState('all') // 'all', 'draft', 'live', 'completed', etc.
+  const [sortBy, setSortBy] = useState('date')
+  const [filterStatus, setFilterStatus] = useState('all')
 
   useEffect(() => {
     fetchCustomTournaments()
     
-    // Show success message if redirected from creation/update
     const message = location.state?.message
     if (message) {
       const stateMessage = location.state.message
@@ -87,12 +87,10 @@ const CustomTournamentsViewAll = () => {
     }
   }
 
-  // Filter tournaments
   const filteredTournaments = filterStatus === 'all' 
     ? tournaments 
     : tournaments.filter(t => t.status === filterStatus)
 
-  // Sort tournaments
   const sortedTournaments = [...filteredTournaments].sort((a, b) => {
     switch (sortBy) {
       case 'name':
@@ -116,11 +114,10 @@ const CustomTournamentsViewAll = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center py-12">
-            <p className="text-gray-600">Loading custom tournaments...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-lime-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-navy-blue text-lg font-semibold">Loading tournaments...</p>
         </div>
       </div>
     )
@@ -128,70 +125,70 @@ const CustomTournamentsViewAll = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-cream py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-4">😕</div>
+          <p className="text-red-600 mb-4 text-lg font-semibold">{error}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-cream py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen p-4 sm:p-6 md:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-4xl font-bold text-navy-blue mb-2">Custom Tournaments</h1>
-              <p className="text-gray-600">Manage your custom tournaments with manual fixture control</p>
-            </div>
-            <div className="flex gap-4">
-              {/* <Link to="/admin/dashboard" className="text-navy-blue hover:text-forest-green font-semibold">
-                ← Dashboard
-              </Link> */}
-              <Link to="/admin/tournaments/custom" className="btn-primary">
-                + Create Custom Tournament
+        <div className="mb-6 sm:mb-8">
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-6 border border-white/20">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-navy-blue mb-2">Tournaments</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage your tournaments with manual fixture control</p>
+              </div>
+              <Link 
+                to="/admin/tournaments/custom" 
+                onClick={scrollToTop}
+                className="btn-primary text-sm sm:text-base px-4 py-2 w-full sm:w-auto text-center"
+              >
+                + Create Tournament
               </Link>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Total</p>
-            <p className="text-2xl font-bold text-navy-blue">{stats.total}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/20">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">Total</p>
+            <p className="text-xl sm:text-2xl font-bold text-navy-blue">{stats.total}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Draft</p>
-            <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/20">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">Draft</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-600">{stats.draft}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Live</p>
-            <p className="text-2xl font-bold text-pink">{stats.live}</p>
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/20">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">Live</p>
+            <p className="text-xl sm:text-2xl font-bold text-pink">{stats.live}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Completed</p>
-            <p className="text-2xl font-bold text-forest-green">{stats.completed}</p>
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/20">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">Completed</p>
+            <p className="text-xl sm:text-2xl font-bold text-forest-green">{stats.completed}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Published</p>
-            <p className="text-2xl font-bold text-lime-green">{stats.published}</p>
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/20 col-span-2 sm:col-span-1">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">Published</p>
+            <p className="text-xl sm:text-2xl font-bold text-lime-green">{stats.published}</p>
           </div>
         </div>
 
         {/* Filters and Sort */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-navy-blue">Filter by Status:</label>
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-6 mb-6 border border-white/20">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
+              <label className="text-xs sm:text-sm font-medium text-navy-blue whitespace-nowrap">Filter by Status:</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-lime-green focus:border-lime-green"
+                className="flex-1 px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-lime-green focus:border-lime-green text-sm sm:text-base"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -202,19 +199,19 @@ const CustomTournamentsViewAll = () => {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-navy-blue">Sort by:</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <label className="text-xs sm:text-sm font-medium text-navy-blue whitespace-nowrap">Sort by:</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-lime-green focus:border-lime-green"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-lime-green focus:border-lime-green text-sm sm:text-base"
               >
                 <option value="date">Date Created (Newest)</option>
                 <option value="name">Name (A-Z)</option>
                 <option value="status">Status</option>
               </select>
             </div>
-            <div className="ml-auto text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
               Showing {sortedTournaments.length} of {tournaments.length} tournament{sortedTournaments.length !== 1 ? 's' : ''}
             </div>
           </div>
@@ -222,65 +219,70 @@ const CustomTournamentsViewAll = () => {
 
         {/* Tournaments List */}
         {sortedTournaments.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <p className="text-gray-600 text-lg mb-4">No custom tournaments found.</p>
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-white/20">
+            <div className="text-6xl mb-4">🏸</div>
+            <p className="text-gray-600 text-base sm:text-lg mb-4">No custom tournaments found.</p>
             {filterStatus !== 'all' && (
               <button
                 onClick={() => setFilterStatus('all')}
-                className="text-lime-green hover:text-forest-green font-semibold mb-4"
+                className="text-lime-green hover:text-forest-green font-semibold mb-4 text-sm sm:text-base"
               >
                 Clear Filter
               </button>
             )}
-            <Link to="/admin/tournaments/custom" className="btn-primary inline-block">
+            <Link 
+              to="/admin/tournaments/custom" 
+              onClick={scrollToTop}
+              className="btn-primary inline-block text-sm sm:text-base"
+            >
               Create Your First Custom Tournament
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {sortedTournaments.map((tournament) => (
-              <div key={tournament._id} className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+              <div key={tournament._id} className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-6 hover:shadow-2xl transition-all border border-white/20">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-navy-blue flex-1 pr-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-navy-blue flex-1 pr-2">
                     {tournament.name}
                   </h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusBadge(tournament.status)}`}>
+                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusBadge(tournament.status)}`}>
                     {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
                   </span>
                 </div>
 
                 <div className="space-y-2 mb-4">
                   {tournament.location && (
-                    <div className="flex items-center text-sm text-gray-600">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600">
                       <span className="font-semibold mr-2">📍</span>
                       <span className="truncate">{tournament.location}</span>
                     </div>
                   )}
                   {tournament.date && (
-                    <div className="flex items-center text-sm text-gray-600">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600">
                       <span className="font-semibold mr-2">📅</span>
                       {formatDate(tournament.date)}
                     </div>
                   )}
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
                     <span className="font-semibold mr-2">🎾</span>
                     {tournament.type.charAt(0).toUpperCase() + tournament.type.slice(1)}
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
                     <span className="font-semibold mr-2">⚙️</span>
                     Format: Custom
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
                     <span className="font-semibold mr-2">🎯</span>
                     {tournament.rules?.points || 11} Points
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs px-2 py-1 rounded ${
                       tournament.isPublic 
-                        ? 'bg-lime-green bg-opacity-20 text-forest-green' 
+                        ? 'bg-lime-green/20 text-forest-green' 
                         : 'bg-gray-200 text-gray-600'
                     }`}>
                       {tournament.isPublic ? 'Published' : 'Draft'}
@@ -290,7 +292,7 @@ const CustomTournamentsViewAll = () => {
                       className={`text-xs px-2 py-1 rounded font-semibold ${
                         tournament.isPublic
                           ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                          : 'bg-lime-green bg-opacity-20 text-forest-green hover:bg-lime-green hover:bg-opacity-30'
+                          : 'bg-lime-green/20 text-forest-green hover:bg-lime-green/30'
                       }`}
                     >
                       {tournament.isPublic ? 'Unpublish' : 'Publish'}
@@ -299,21 +301,15 @@ const CustomTournamentsViewAll = () => {
                   <div className="flex gap-2">
                     <Link
                       to={`/admin/tournaments/custom/${tournament._id}/manage`}
-                      className="text-sm text-lime-green hover:text-forest-green font-semibold px-2 py-1 rounded hover:bg-lime-green hover:bg-opacity-10"
+                      onClick={scrollToTop}
+                      className="text-xs sm:text-sm text-lime-green hover:text-forest-green font-semibold px-2 py-1 rounded hover:bg-lime-green/10 transition-colors"
                       title="Manage Tournament"
                     >
                       Manage
                     </Link>
-                    <Link
-                      to={`/admin/tournaments/custom/${tournament._id}/edit`}
-                      className="text-sm text-navy-blue hover:text-forest-green font-semibold"
-                      title="Edit Tournament"
-                    >
-                      Edit
-                    </Link>
                     <button
                       onClick={() => handleDeleteTournament(tournament._id, tournament.name, tournament.status)}
-                      className="text-sm text-red-600 hover:text-red-800 font-semibold"
+                      className="text-xs sm:text-sm text-red-600 hover:text-red-800 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors"
                       title="Delete Tournament"
                     >
                       Delete
@@ -330,4 +326,3 @@ const CustomTournamentsViewAll = () => {
 }
 
 export default CustomTournamentsViewAll
-

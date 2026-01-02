@@ -5,18 +5,23 @@ import { publicAPI } from '../services/api'
 const TournamentView = () => {
   const { id } = useParams()
   const [tournament, setTournament] = useState(null)
+  const [matches, setMatches] = useState({ past: [], live: [], upcoming: [], cancelled: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchTournament()
+    fetchTournamentData()
   }, [id])
 
-  const fetchTournament = async () => {
+  const fetchTournamentData = async () => {
     try {
       setLoading(true)
-      const response = await publicAPI.getTournament(id)
-      setTournament(response.data.data)
+      const [tournamentRes, matchesRes] = await Promise.all([
+        publicAPI.getTournament(id),
+        publicAPI.getTournamentMatches(id).catch(() => ({ data: { matches: { past: [], live: [], upcoming: [], cancelled: [] } } }))
+      ])
+      setTournament(tournamentRes.data.data)
+      setMatches(matchesRes.data.matches || { past: [], live: [], upcoming: [], cancelled: [] })
       setError(null)
     } catch (err) {
       setError('Failed to load tournament')
@@ -26,107 +31,401 @@ const TournamentView = () => {
     }
   }
 
+  // Get all matches
+  const allMatches = [
+    ...(matches.upcoming || []),
+    ...(matches.live || []),
+    ...(matches.past || []),
+    ...(matches.cancelled || [])
+  ]
+
+  // Group matches by round
+  const matchesByRound = {}
+  allMatches.forEach(match => {
+    if (!matchesByRound[match.round]) {
+      matchesByRound[match.round] = []
+    }
+    matchesByRound[match.round].push(match)
+  })
+
+  // Define round order: Group matches first, then Quarterfinal, Semifinal, Final
+  const getRoundOrder = (round) => {
+    if (round.startsWith('Group ')) {
+      return `0-${round}` // Groups come first
+    }
+    const roundOrder = {
+      'Quarterfinal': 1,
+      'Quarter Finals': 1,
+      'Semifinal': 2,
+      'Semi Finals': 2,
+      'Final': 3
+    }
+    if (roundOrder[round] !== undefined) {
+      return roundOrder[round]
+    }
+    if (round.toLowerCase().includes('quarter')) return 1
+    if (round.toLowerCase().includes('semi')) return 2
+    if (round.toLowerCase().includes('final') && !round.toLowerCase().includes('semi') && !round.toLowerCase().includes('quarter')) return 3
+    return 4
+  }
+
+  // Sort rounds
+  const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
+    const orderA = getRoundOrder(a)
+    const orderB = getRoundOrder(b)
+    if (typeof orderA === 'string' && typeof orderB === 'string') {
+      return orderA.localeCompare(orderB)
+    }
+    if (typeof orderA === 'number' && typeof orderB === 'number') {
+      return orderA - orderB
+    }
+    if (typeof orderA === 'string') return -1
+    if (typeof orderB === 'string') return 1
+    return 0
+  })
+
+  // Format date
+  const formatDate = (date) => {
+    if (!date) return 'TBA'
+    const d = new Date(date)
+    return d.toLocaleDateString('en-US', { 
+      weekday: 'short',
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      // hour: '2-digit',
+      // minute: '2-digit'
+    })
+  }
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      live: 'bg-pink text-white animate-pulse',
+      completed: 'bg-forest-green text-white',
+      upcoming: 'bg-lime-green text-navy-blue',
+      cancelled: 'bg-red-500 text-white',
+      comingSoon: 'bg-blue-500 text-white',
+      delayed: 'bg-yellow-500 text-white',
+      draft: 'bg-gray-400 text-white'
+    }
+    return badges[status] || 'bg-gray-400 text-white'
+  }
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-navy-blue text-xl">Loading tournament...</div>
+      <div className="min-h-screen  flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-lime-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-navy-blue text-lg font-semibold">Loading tournament...</p>
+        </div>
       </div>
     )
   }
 
   if (error || !tournament) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600 mb-4">{error || 'Tournament not found'}</p>
-        <Link to="/" className="btn-primary inline-block">
-          Back to Tournaments
-        </Link>
+      <div className="min-h-screen bg-gradient-to-br from-lime-green/20 via-cream to-forest-green/10 flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-4">😕</div>
+          <p className="text-red-600 mb-4 text-lg font-semibold">{error || 'Tournament not found'}</p>
+          <Link to="/" className=" inline-block">
+            ← Back to Tournaments
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      {/* Tournament Header */}
-      <div className="mb-8">
-        <Link to="/" className="text-lime-green hover:underline mb-4 inline-block">
-          ← Back to Tournaments
-        </Link>
-        <h1 className="text-4xl font-bold text-navy-blue mb-2">{tournament.name}</h1>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <span className="px-3 py-1 bg-forest-green text-white rounded-full">
-            {tournament.type.toUpperCase()}
-          </span>
-          <span className="px-3 py-1 bg-pink text-white rounded-full">
-            {tournament.format.toUpperCase()}
-          </span>
-          <span className="px-3 py-1 bg-lime-green text-navy-blue rounded-full font-semibold">
-            {tournament.status.toUpperCase()}
-          </span>
-        </div>
-      </div>
+    <div className="min-h-screen ">
+      {/* Hero Section with Glassmorphism */}
+      <div className="relative overflow-hidden">
+        {/* <div className="absolute inset-0 bg-gradient-to-r from-lime-green/30 via-pink/20 to-forest-green/30"></div> */}
+        <div className="relative backdrop-blur-sm  p-4 sm:p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <Link 
+              to="/" 
+              className="inline-flex items-center text-navy-blue hover:text-forest-green mb-4 text-sm sm:text-base font-medium"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Tournaments
+            </Link>
 
-      {/* Tournament Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="card">
-          <h2 className="text-2xl font-bold text-navy-blue mb-4">Tournament Details</h2>
-          <div className="space-y-3">
-            <div>
-              <span className="font-semibold text-gray-700">Current Round:</span>
-              <p className="text-navy-blue">{tournament.currentRound || 'Not started'}</p>
-            </div>
-            <div>
-              <span className="font-semibold text-gray-700">Scoring System:</span>
-              <p className="text-navy-blue capitalize">{tournament.rules.scoringSystem}</p>
-            </div>
-            <div>
-              <span className="font-semibold text-gray-700">Points:</span>
-              <p className="text-navy-blue">{tournament.rules.points}</p>
+            {/* Tournament Header */}
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mt-4 border border-white/20">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-navy-blue mb-3">
+                    {tournament.name}
+                  </h1>
+                  
+                  {/* Tournament Details Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {tournament.location && (
+                      <div className="flex items-start gap-2">
+                        <div className="text-lime-green text-xl sm:text-2xl mt-0.5">📍</div>
+                        <div>
+                          <div className="text-xs text-gray-600 font-medium">Location</div>
+                          <div className="text-sm sm:text-base font-semibold text-navy-blue">{tournament.location}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {tournament.date && (
+                      <div className="flex items-start gap-2">
+                        <div className="text-pink text-xl sm:text-2xl mt-0.5">📅</div>
+                        <div>
+                          <div className="text-xs text-gray-600 font-medium">Date & Time</div>
+                          <div className="text-sm sm:text-base font-semibold text-navy-blue">{formatDate(tournament.date)}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start gap-2">
+                      <div className="text-forest-green text-xl sm:text-2xl mt-0.5">🎾</div>
+                      <div>
+                        <div className="text-xs text-gray-600 font-medium">Type</div>
+                        <div className="text-sm sm:text-base font-semibold text-navy-blue capitalize">{tournament.type}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex-shrink-0">
+                  <span className={`inline-block px-4 py-2 rounded-full text-xs sm:text-sm font-bold ${getStatusBadge(tournament.status)}`}>
+                    {tournament.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tournament Rules & Info */}
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/30">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-white/40 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-600 mb-1">Points</div>
+                    <div className="text-xl font-bold text-navy-blue">{tournament.rules?.points || 11}</div>
+                  </div>
+                  <div className="bg-white/40 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-600 mb-1">Scoring</div>
+                    <div className="text-sm font-semibold text-navy-blue capitalize">{tournament.rules?.scoringSystem || 'rally'}</div>
+                  </div>
+                  <div className="bg-white/40 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-600 mb-1">Current Round</div>
+                    <div className="text-sm font-semibold text-navy-blue">{tournament.currentRound || 'Not Started'}</div>
+                  </div>
+                  <div className="bg-white/40 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-600 mb-1">Total Matches</div>
+                    <div className="text-xl font-bold text-navy-blue">{allMatches.length}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="card">
-          <h2 className="text-2xl font-bold text-navy-blue mb-4">Quick Actions</h2>
-          <div className="space-y-3">
+      {/* Quick Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6 sm:mt-8 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/30">
+            <div className="text-2xl sm:text-3xl font-bold text-pink mb-1">{matches.live?.length || 0}</div>
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">Live</div>
+          </div>
+          <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/30">
+            <div className="text-2xl sm:text-3xl font-bold text-lime-green mb-1">{matches.upcoming?.length || 0}</div>
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">Upcoming</div>
+          </div>
+          <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/30">
+            <div className="text-2xl sm:text-3xl font-bold text-forest-green mb-1">{matches.past?.length || 0}</div>
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">Completed</div>
+          </div>
+          <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 text-center border border-white/30">
+            <div className="text-2xl sm:text-3xl font-bold text-navy-blue mb-1">{allMatches.length}</div>
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">Total</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6 sm:mt-8 mb-6 sm:mb-8">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-6 border border-white/20">
+          <h2 className="text-lg sm:text-xl font-bold text-navy-blue mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <Link
               to={`/tournament/${id}/matches`}
-              className="block btn-primary text-center"
+              className="bg-gradient-to-r from-lime-green to-forest-green text-white hover:from-lime-green/90 hover:to-forest-green/90 rounded-xl p-4 text-center font-semibold transition-all shadow-lg hover:shadow-xl"
             >
-              View Matches
+              <div className="text-2xl mb-2">🎾</div>
+              <div className="text-sm sm:text-base">View All Matches</div>
             </Link>
             <Link
               to={`/tournament/${id}/standings`}
-              className="block bg-forest-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-center font-semibold"
+              className="bg-gradient-to-r from-forest-green to-navy-blue text-white hover:from-forest-green/90 hover:to-navy-blue/90 rounded-xl p-4 text-center font-semibold transition-all shadow-lg hover:shadow-xl"
             >
-              View Standings
+              <div className="text-2xl mb-2">📊</div>
+              <div className="text-sm sm:text-base">View Standings</div>
             </Link>
             <Link
               to={`/tournament/${id}/bracket`}
-              className="block btn-secondary text-center"
+              className="bg-gradient-to-r from-pink to-lime-green text-white hover:from-pink/90 hover:to-lime-green/90 rounded-xl p-4 text-center font-semibold transition-all shadow-lg hover:shadow-xl"
             >
-              View Bracket
+              <div className="text-2xl mb-2">🏆</div>
+              <div className="text-sm sm:text-base">View Bracket</div>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Standings Preview */}
-      <div className="card">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-navy-blue">Standings</h2>
-          <Link
-            to={`/tournament/${id}/standings`}
-            className="text-lime-green hover:underline"
-          >
-            View Full Standings →
-          </Link>
-        </div>
-        <p className="text-gray-600">Standings will be displayed here once matches are completed.</p>
+      {/* Matches by Round - Table Format */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-8 sm:pb-12">
+        {sortedRounds.length === 0 ? (
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-white/20">
+            <div className="text-6xl mb-4">🏸</div>
+            <p className="text-gray-600 text-base sm:text-lg mb-2">No matches scheduled yet</p>
+            <p className="text-gray-500 text-sm">Matches will appear here once the tournament begins</p>
+          </div>
+        ) : (
+          <div className="space-y-6 sm:space-y-8">
+            {sortedRounds.map((round) => {
+              const roundMatches = matchesByRound[round]
+              const liveCount = roundMatches.filter(m => m.status === 'live').length
+              const completedCount = roundMatches.filter(m => m.status === 'completed').length
+              
+              return (
+                <div 
+                  key={round}
+                  className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-white/20"
+                >
+                  {/* Round Header */}
+                  <div className="bg-gradient-to-r from-lime-green/80 to-forest-green/80 p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
+                        {round}
+                      </h2>
+                      <div className="flex gap-2 sm:gap-3">
+                        {liveCount > 0 && (
+                          <span className="bg-pink text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                            {liveCount} Live
+                          </span>
+                        )}
+                        <span className="bg-white/30 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                          {completedCount}/{roundMatches.length} Done
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Matches Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-white/40 backdrop-blur-sm">
+                        <tr>
+                          <th className="px-3 sm:px-4 py-3 text-left text-xs sm:text-sm font-semibold text-navy-blue">Team A</th>
+                          <th className="px-3 sm:px-4 py-3 text-center text-xs sm:text-sm font-semibold text-navy-blue">Score</th>
+                          <th className="px-3 sm:px-4 py-3 text-right text-xs sm:text-sm font-semibold text-navy-blue">Team B</th>
+                          <th className="px-3 sm:px-4 py-3 text-center text-xs sm:text-sm font-semibold text-navy-blue hidden sm:table-cell">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/20">
+                        {roundMatches.map((match, idx) => {
+                          const isLive = match.status === 'live'
+                          const isCompleted = match.status === 'completed'
+                          const isCancelled = match.status === 'cancelled'
+                          
+                          return (
+                            <tr 
+                              key={match._id}
+                              className={`hover:bg-white/40 transition-colors ${
+                                isLive ? 'bg-pink/10' : 
+                                isCompleted ? 'bg-forest-green/10' :
+                                isCancelled ? 'bg-gray-200/50' : ''
+                              }`}
+                            >
+                              {/* Team A */}
+                              <td className="px-3 sm:px-4 py-3 sm:py-4">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-navy-blue text-sm sm:text-base">
+                                    {match.participantA?.name || 'TBD'}
+                                  </span>
+                                  {match.participantA?.players && (
+                                    <span className="text-xs text-gray-600 mt-0.5">
+                                      {match.participantA.players.join(' & ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Score */}
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-center">
+                                {isCancelled ? (
+                                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Cancelled</span>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                    <span className={`text-lg sm:text-xl md:text-2xl font-bold ${
+                                      isLive ? 'text-pink' : 
+                                      isCompleted ? 'text-forest-green' : 
+                                      'text-gray-400'
+                                    }`}>
+                                      {match.score?.a || 0}
+                                    </span>
+                                    <span className="text-gray-400 text-sm sm:text-base">-</span>
+                                    <span className={`text-lg sm:text-xl md:text-2xl font-bold ${
+                                      isLive ? 'text-pink' : 
+                                      isCompleted ? 'text-forest-green' : 
+                                      'text-gray-400'
+                                    }`}>
+                                      {match.score?.b || 0}
+                                    </span>
+                                    {isLive && (
+                                      <span className="w-2 h-2 bg-pink rounded-full animate-pulse"></span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Team B */}
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-right">
+                                <div className="flex flex-col items-end">
+                                  <span className="font-semibold text-navy-blue text-sm sm:text-base">
+                                    {match.participantB?.name || 'TBD'}
+                                  </span>
+                                  {match.participantB?.players && (
+                                    <span className="text-xs text-gray-600 mt-0.5">
+                                      {match.participantB.players.join(' & ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Status (Hidden on mobile) */}
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-center hidden sm:table-cell">
+                                <span className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${
+                                  isLive ? 'bg-pink text-white animate-pulse' :
+                                  isCompleted ? 'bg-forest-green text-white' :
+                                  isCancelled ? 'bg-gray-400 text-white' :
+                                  'bg-lime-green text-navy-blue'
+                                }`}>
+                                  {match.status.toUpperCase()}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 export default TournamentView
-

@@ -22,6 +22,9 @@ export const publicAPI = {
   
   // Get tournament standings
   getTournamentStandings: (id) => api.get(`/public/tournaments/${id}/standings`),
+  
+  // Get tournament group standings
+  getTournamentGroupStandings: (id) => api.get(`/public/tournaments/${id}/group-standings`),
 }
 
 // Admin API endpoints
