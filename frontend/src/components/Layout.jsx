@@ -18,7 +18,7 @@ const Layout = ({ children }) => {
       <header className="bg-navy-blue text-white shadow-lg">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to={isAuthenticated ? "/admin/dashboard" : "/"} className="flex items-center space-x-3">
+            <Link to={isAuthenticated ? "/" : "/"} className="flex items-center space-x-3">
               <img 
                 src="https://res.cloudinary.com/dacuzjrcg/image/upload/v1757493607/Logo_with_text_h9ypxu.png" 
                 alt="Sour Pickle Logo" 
@@ -29,7 +29,7 @@ const Layout = ({ children }) => {
             <nav className="hidden md:flex space-x-4 items-center">
               {isAuthenticated ? (
                 <>
-                  <Link to="/admin/dashboard" className="hover:text-lime-green transition-colors">
+                  <Link to="/admin/tournaments/custom/list" className="hover:text-lime-green transition-colors">
                     Dashboard
                   </Link>
                   <button

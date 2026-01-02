@@ -149,9 +149,9 @@ const CustomTournamentsViewAll = () => {
               <p className="text-gray-600">Manage your custom tournaments with manual fixture control</p>
             </div>
             <div className="flex gap-4">
-              <Link to="/admin/dashboard" className="text-navy-blue hover:text-forest-green font-semibold">
+              {/* <Link to="/admin/dashboard" className="text-navy-blue hover:text-forest-green font-semibold">
                 ← Dashboard
-              </Link>
+              </Link> */}
               <Link to="/admin/tournaments/custom" className="btn-primary">
                 + Create Custom Tournament
               </Link>

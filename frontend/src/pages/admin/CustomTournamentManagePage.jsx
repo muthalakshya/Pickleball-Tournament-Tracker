@@ -24,6 +24,7 @@ const CustomTournamentManagePage = () => {
   const [uploading, setUploading] = useState(false)
   const [uploadErrors, setUploadErrors] = useState([])
   const [uploadSuccess, setUploadSuccess] = useState('')
+  const [showNoPlayersModal, setShowNoPlayersModal] = useState(false)
 
   useEffect(() => {
     fetchTournamentData()
@@ -255,22 +256,28 @@ const CustomTournamentManagePage = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Link
-            to={`/admin/tournaments/custom/${id}/setup`}
-            className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
+          <button
+            onClick={() => {
+              if (participants.length < 1) {
+                setShowNoPlayersModal(true)
+              } else {
+                navigate(`/admin/tournaments/custom/${id}/setup`)
+              }
+            }}
+            className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center w-full"
           >
             <div className="text-2xl mb-2">🎯</div>
             <div className="font-semibold text-navy-blue">Setup Tournament</div>
             <div className="text-xs text-gray-600 mt-1">Group or simple format</div>
-          </Link>
-          <Link
+          </button>
+          {/* <Link
             to={`/admin/tournaments/${id}/fixtures`}
             className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
           >
             <div className="text-2xl mb-2">⚙️</div>
             <div className="font-semibold text-navy-blue">Manage Fixtures</div>
             <div className="text-xs text-gray-600 mt-1">Create rounds & matches</div>
-          </Link>
+          </Link> */}
           <Link
             to={`/admin/tournaments/custom/${id}/matches`}
             className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
@@ -287,11 +294,11 @@ const CustomTournamentManagePage = () => {
             <div className="font-semibold text-navy-blue">Edit Tournament</div>
             <div className="text-xs text-gray-600 mt-1">Update details</div>
           </Link>
-          <div className="bg-white rounded-lg shadow-lg p-4 text-center">
+          <button onClick={() => setActiveTab('players')} className="bg-white rounded-lg shadow-lg p-4 text-center">
             <div className="text-2xl mb-2">👥</div>
             <div className="font-semibold text-navy-blue">Participants</div>
             <div className="text-xs text-gray-600 mt-1">{participants.length} players</div>
-          </div>
+          </button>
         </div>
 
         {/* Tabs */}
@@ -540,19 +547,22 @@ const CustomTournamentManagePage = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {participants.map((participant) => (
-                    <div key={participant._id} className="border border-gray-200 rounded-lg p-4 relative">
+                    <div key={participant._id} className="border border-gray-200 rounded-lg p-4 relative hover:shadow-md transition-shadow bg-white">
                       <button
                         onClick={() => handleDeletePlayer(participant._id, participant.name)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all z-10"
                         title="Delete Player"
+                        aria-label={`Delete ${participant.name}`}
                       >
-                        <i className="fas fa-trash"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
-                      <h3 className="font-semibold text-navy-blue mb-2 pr-8">{participant.name}</h3>
+                      <h3 className="font-semibold text-navy-blue mb-2 pr-12 break-words">{participant.name}</h3>
                       {participant.players && participant.players.length > 0 && (
                         <div className="text-sm text-gray-600">
                           {participant.players.map((player, idx) => (
-                            <p key={idx}>• {player}</p>
+                            <p key={idx} className="truncate">• {player}</p>
                           ))}
                         </div>
                       )}
@@ -579,7 +589,7 @@ const CustomTournamentManagePage = () => {
                     Manage Fixtures
                   </Link>
                   <Link
-                    to={`/admin/tournaments/${id}/matches`}
+                    to={`/admin/tournaments/custom/${id}/matches`}
                     className="btn-secondary"
                   >
                     View All Matches
@@ -613,7 +623,7 @@ const CustomTournamentManagePage = () => {
                 <p className="text-gray-600 text-lg mb-4">No fixtures created yet.</p>
                 <p className="text-gray-500 mb-4">Create rounds and matches using the fixture manager.</p>
                 <Link
-                  to={`/admin/tournaments/${id}/fixtures`}
+                  to={`/admin/tournaments/custom/${id}/fixtures`}
                   className="btn-primary inline-block"
                 >
                   Go to Fixture Manager
@@ -623,6 +633,38 @@ const CustomTournamentManagePage = () => {
           </div>
         )}
       </div>
+
+      {/* No Players Modal */}
+      {showNoPlayersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h2 className="text-2xl font-bold text-navy-blue mb-4">No Players Added</h2>
+              <p className="text-gray-600 mb-6">
+                You need to add at least <strong>1 player</strong> before setting up the tournament fixtures.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => {
+                    setShowNoPlayersModal(false)
+                    setActiveTab('players')
+                  }}
+                  className="btn-primary"
+                >
+                  Add Players
+                </button>
+                <button
+                  onClick={() => setShowNoPlayersModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

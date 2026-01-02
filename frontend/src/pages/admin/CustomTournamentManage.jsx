@@ -156,6 +156,25 @@ const CustomTournamentManage = () => {
     return badges[status] || 'bg-gray-400 text-white'
   }
 
+  const handleDeletePlayer = async (participantId, participantName) => {
+    if (!window.confirm(`Are you sure you want to delete participant "${participantName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await adminAPI.deleteParticipant(id, participantId)
+      fetchTournamentData()
+      alert('Participant deleted successfully!')
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to delete participant'
+      if (err.response?.data?.matchesCount) {
+        alert(`${errorMsg}\n\nThis player is involved in ${err.response.data.matchesCount} match(es). Please delete or update those matches first.`)
+      } else {
+        alert(errorMsg)
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream py-8">
@@ -470,30 +489,11 @@ const CustomTournamentManage = () => {
                   {participants.map((participant) => (
                     <div key={participant._id} className="border border-gray-200 rounded-lg p-4 relative">
                       <button
-                        onClick={async () => {
-                          if (!window.confirm(`Are you sure you want to delete "${participant.name}"? This action cannot be undone.`)) {
-                            return
-                          }
-
-                          try {
-                            await adminAPI.deleteParticipant(id, participant._id)
-                            fetchTournamentData()
-                            alert('Player deleted successfully!')
-                          } catch (err) {
-                            const errorMsg = err.response?.data?.message || 'Failed to delete player'
-                            if (err.response?.data?.matchesCount) {
-                              alert(`${errorMsg}\n\nThis player is involved in ${err.response.data.matchesCount} match(es). Please delete or update those matches first.`)
-                            } else {
-                              alert(errorMsg)
-                            }
-                          }
-                        }}
-                        className="absolute top-2 right-2 text-red-600 hover:text-red-800 font-semibold text-sm"
+                        onClick={() => handleDeletePlayer(participant._id, participant.name)}
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
                         title="Delete Player"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <i className="fas fa-trash"></i>
                       </button>
                       <h3 className="font-semibold text-navy-blue mb-2 pr-8">{participant.name}</h3>
                       {participant.players && participant.players.length > 0 && (
@@ -520,13 +520,13 @@ const CustomTournamentManage = () => {
                 <h2 className="text-2xl font-bold text-navy-blue">Fixtures & Matches</h2>
                 <div className="flex gap-4">
                   <Link
-                    to={`/admin/tournaments/${id}/fixtures`}
+                    to={`/admin/tournaments/custom/${id}/fixtures`}
                     className="btn-primary"
                   >
                     {totalMatches === 0 ? 'Create Fixtures' : 'Manage Fixtures'}
                   </Link>
                   <Link
-                    to={`/admin/tournaments/${id}/matches`}
+                    to={`/admin/tournaments/custom/${id}/matches`}
                     className="btn-secondary"
                   >
                     View All Matches
@@ -569,7 +569,7 @@ const CustomTournamentManage = () => {
                     : 'Create matches manually using the "Create Match" button.'}
                 </p>
                 <Link
-                  to={`/admin/tournaments/${id}/matches`}
+                  to={`/admin/tournaments/custom/${id}/matches`}
                   className="btn-primary inline-block"
                   disabled={participants.length < 2}
                 >

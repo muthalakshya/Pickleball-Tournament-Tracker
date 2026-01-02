@@ -97,7 +97,7 @@ const MatchController = () => {
       setEditingMatch(null)
       setCompletingMatch(false)
       fetchMatches()
-      alert('Match completed successfully!')
+      // alert('Match completed successfully!')
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to complete match')
     }
@@ -370,10 +370,10 @@ const MatchController = () => {
     <div>
       <div className="mb-8">
         <button
-          onClick={() => navigate('/admin/dashboard')}
+          onClick={() => navigate('/admin/tournaments/custom/list')}
           className="text-lime-green hover:underline mb-4 inline-block"
         >
-          ← Back to Dashboard
+          ← Back to Custom Tournaments
         </button>
         <h1 className="text-4xl font-bold text-navy-blue mb-2">
           {tournament?.name} - Match Control

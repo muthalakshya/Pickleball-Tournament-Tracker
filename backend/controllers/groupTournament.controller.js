@@ -139,6 +139,12 @@ export const generateGroupTournament = async (req, res) => {
 
     // Update tournament currentRound
     tournament.currentRound = 'Group Stage';
+    
+    // Store tournament metadata for later use (MongoDB allows custom fields)
+    tournament.topPlayersPerGroup = topPlayersPerGroup;
+    tournament.tournamentStructure = tournamentStructure;
+    tournament.numGroups = numGroups;
+    
     await tournament.save();
 
     res.status(201).json({
@@ -223,17 +229,20 @@ async function generateGroupStageMatches(tournamentId, groups, format, tournamen
       // Round Robin: Each team plays every other team once
       for (let i = 0; i < group.length; i++) {
         for (let j = i + 1; j < group.length; j++) {
-          allMatches.push({
-            tournamentId,
-            round: roundName,
-            participantA: group[i]._id,
-            participantB: group[j]._id,
-            score: { a: 0, b: 0 },
-            status: 'upcoming',
-            order: matchOrder++,
-            courtNumber: null,
-            groupName: groupName
-          });
+          // Ensure participants are different (prevent A vs A)
+          if (group[i]._id.toString() !== group[j]._id.toString()) {
+            allMatches.push({
+              tournamentId,
+              round: roundName,
+              participantA: group[i]._id,
+              participantB: group[j]._id,
+              score: { a: 0, b: 0 },
+              status: 'upcoming',
+              order: matchOrder++,
+              courtNumber: null,
+              groupName: groupName
+            });
+          }
         }
       }
     } else if (format === 'knockout') {

@@ -11,6 +11,7 @@
 
 import Match from '../models/match.model.js';
 import Tournament from '../models/tournament.model.js';
+import Participant from '../models/participant.model.js';
 
 /**
  * Get Match Winner
@@ -360,61 +361,107 @@ export const processMatchCompletion = async (matchId) => {
   const roundComplete = await isRoundComplete(tournament._id, match.round);
   progression.roundComplete = roundComplete;
 
-  // Handle group stage knockout matches (within a group)
+  // Handle group stage completion - check if ALL group stage matches are complete
   if (roundComplete && match.round.startsWith('Group ')) {
-    // This is a group stage match - check if we need to generate next round within the group
-    const groupName = match.round.replace('Group ', '');
-    const groupMatches = await Match.find({
-      tournamentId: tournament._id,
-      round: match.round
-    });
-    
-    // Check if all matches in this group round are complete
-    const allComplete = groupMatches.every(m => m.status === 'completed');
-    
-    if (allComplete) {
-      // Get winners from this group round
-      const winners = await getRoundWinners(tournament._id, match.round);
-      
-      // Check if there's a next round in this group (e.g., "Group A - Round 2")
-      // For knockout format within groups, we might have multiple rounds
-      // Check if next round exists or needs to be created
-      const nextGroupRound = `Group ${groupName} - Round 2`; // Assuming round numbering
-      const nextRoundMatches = await Match.find({
+      // Check if ALL group stage matches are complete
+      const allGroupMatches = await Match.find({
         tournamentId: tournament._id,
-        round: nextGroupRound
-      });
+        round: { $regex: /^Group / }
+      })
+      .populate('participantA', '_id name')
+      .populate('participantB', '_id name')
+      .lean();
+    
+    const allGroupMatchesComplete = allGroupMatches.every(m => m.status === 'completed');
+    
+    if (allGroupMatchesComplete) {
+      // All group stage matches are complete - now fill knockout rounds
+      // Get tournament metadata to determine topPlayersPerGroup and tournamentStructure
+      // We'll need to get this from tournament metadata or calculate from existing knockout matches
       
-      if (nextRoundMatches.length > 0) {
-        // Next round exists - auto-fill TBD participants
-        let winnerIndex = 0;
-        for (const nextMatch of nextRoundMatches) {
-          if (!nextMatch.participantA && winnerIndex < winners.length) {
-            nextMatch.participantA = winners[winnerIndex++];
-            await nextMatch.save();
+      // Check if knockout rounds exist with TBD participants
+      const knockoutRounds = ['Quarterfinal', 'Semifinal', 'Final'];
+      const knockoutMatches = await Match.find({
+        tournamentId: tournament._id,
+        round: { $in: knockoutRounds }
+      }).sort({ round: 1, order: 1 });
+      
+      if (knockoutMatches.length > 0) {
+        // Check if any knockout matches have TBD participants
+        const hasTBDMatches = knockoutMatches.some(m => !m.participantA || !m.participantB);
+        
+        if (hasTBDMatches) {
+          // Calculate group standings and get qualified players
+          const participants = await Participant.find({ tournamentId: tournament._id }).lean();
+          const completedGroupMatches = allGroupMatches.filter(m => 
+            m.status === 'completed' && m.participantA && m.participantB
+          );
+          
+          // Calculate standings per group
+          const groupStandings = await calculateGroupStandingsForProgression(participants, completedGroupMatches);
+          
+          // Get topPlayersPerGroup from tournament metadata (stored during fixture generation)
+          let topPlayersPerGroup = tournament.topPlayersPerGroup;
+          
+          // If not stored, calculate from knockout match structure
+          if (!topPlayersPerGroup || topPlayersPerGroup < 1) {
+            const quarterfinalMatches = knockoutMatches.filter(m => m.round === 'Quarterfinal');
+            const semifinalMatches = knockoutMatches.filter(m => m.round === 'Semifinal');
+            const finalMatches = knockoutMatches.filter(m => m.round === 'Final');
+            
+            // Get unique groups from group matches
+            const uniqueGroups = new Set(allGroupMatches.map(m => m.round.replace('Group ', '')));
+            const numGroups = uniqueGroups.size;
+            
+            // Calculate total qualified players needed based on knockout structure
+            let totalQualifiedNeeded = 0;
+            if (quarterfinalMatches.length > 0) {
+              // Quarterfinal exists - need 8 players (4 matches * 2 players each)
+              totalQualifiedNeeded = quarterfinalMatches.length * 2;
+            } else if (semifinalMatches.length > 0) {
+              // Only semifinal - need 4 players (2 matches * 2 players each)
+              totalQualifiedNeeded = semifinalMatches.length * 2;
+            } else if (finalMatches.length > 0) {
+              // Only final - need 2 players (1 match * 2 players)
+              totalQualifiedNeeded = finalMatches.length * 2;
+            }
+            
+            // Calculate topPlayersPerGroup: total qualified / number of groups
+            topPlayersPerGroup = numGroups > 0 ? Math.floor(totalQualifiedNeeded / numGroups) : 2;
+            
+            // Validate: topPlayersPerGroup should be at least 1 and reasonable
+            if (topPlayersPerGroup < 1) {
+              topPlayersPerGroup = 1; // Minimum 1 player per group
+            }
+            if (topPlayersPerGroup > 10) {
+              // If calculation seems wrong, try to infer from TBD slots
+              const totalTBDNeeded = knockoutMatches.filter(m => 
+                !m.participantA || !m.participantB
+              ).reduce((sum, m) => {
+                return sum + (m.participantA === null ? 1 : 0) + (m.participantB === null ? 1 : 0);
+              }, 0);
+              
+              if (totalTBDNeeded > 0 && numGroups > 0) {
+                topPlayersPerGroup = Math.floor(totalTBDNeeded / numGroups);
+              } else {
+                topPlayersPerGroup = 2; // Default fallback
+              }
+            }
           }
-          if (!nextMatch.participantB && winnerIndex < winners.length) {
-            nextMatch.participantB = winners[winnerIndex++];
-            await nextMatch.save();
-          }
+          
+          // Get top players from each group
+          const qualifiedPlayers = getTopPlayersFromGroupsForProgression(groupStandings, topPlayersPerGroup);
+          
+          // Fill knockout matches with qualified players
+          await fillKnockoutRoundsWithQualifiedPlayers(knockoutMatches, qualifiedPlayers, tournament._id);
+          
+          progression.groupStageComplete = true;
+          progression.knockoutRoundsFilled = true;
+          progression.qualifiedPlayers = qualifiedPlayers.length;
+          progression.updatedRounds.push(...knockoutRounds.filter(r => 
+            knockoutMatches.some(m => m.round === r)
+          ));
         }
-        progression.nextRoundFilled = true;
-        progression.updatedRounds.push(nextGroupRound);
-      } else if (winners.length > 1) {
-        // Next round doesn't exist but we have winners - create it
-        const newMatches = await generateNextRoundMatches(
-          tournament._id,
-          match.round,
-          nextGroupRound
-        );
-        progression.nextRoundGenerated = true;
-        progression.newMatches = newMatches.length;
-        progression.updatedRounds.push(nextGroupRound);
-      } else {
-        // Group knockout complete - winner advances
-        progression.groupRoundComplete = true;
-        progression.groupName = groupName;
-        progression.winner = winners[0];
       }
     }
   }
@@ -498,4 +545,294 @@ export const processMatchCompletion = async (matchId) => {
 
   return progression;
 };
+
+/**
+ * Calculate Group Standings for Progression
+ * 
+ * Helper function to calculate standings per group
+ */
+async function calculateGroupStandingsForProgression(participants, completedMatches) {
+  const groupStandingsMap = new Map();
+
+  // Initialize standings for each group
+  completedMatches.forEach(match => {
+    const groupName = match.round.replace('Group ', '');
+    if (!groupStandingsMap.has(groupName)) {
+      groupStandingsMap.set(groupName, {
+        groupName,
+        participants: new Map()
+      });
+    }
+  });
+
+  // Process matches for each group
+  completedMatches.forEach(match => {
+    const groupName = match.round.replace('Group ', '');
+    const groupData = groupStandingsMap.get(groupName);
+    
+    if (!match.participantA || !match.participantB) return;
+
+    // Handle both ObjectId and populated participant objects
+    const pAId = match.participantA?._id 
+      ? match.participantA._id.toString() 
+      : (match.participantA?.toString ? match.participantA.toString() : null);
+    const pBId = match.participantB?._id 
+      ? match.participantB._id.toString() 
+      : (match.participantB?.toString ? match.participantB.toString() : null);
+    
+    if (!pAId || !pBId) return;
+
+    // Initialize participants if not exists
+    if (!groupData.participants.has(pAId)) {
+      const participant = participants.find(p => p._id.toString() === pAId);
+      if (participant) {
+        groupData.participants.set(pAId, {
+          participant: {
+            id: participant._id,
+            name: participant.name,
+            players: participant.players
+          },
+          stats: {
+            matchesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            pointsFor: 0,
+            pointsAgainst: 0,
+            pointDifference: 0
+          }
+        });
+      }
+    }
+    if (!groupData.participants.has(pBId)) {
+      const participant = participants.find(p => p._id.toString() === pBId);
+      if (participant) {
+        groupData.participants.set(pBId, {
+          participant: {
+            id: participant._id,
+            name: participant.name,
+            players: participant.players
+          },
+          stats: {
+            matchesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            pointsFor: 0,
+            pointsAgainst: 0,
+            pointDifference: 0
+          }
+        });
+      }
+    }
+
+    const standingA = groupData.participants.get(pAId);
+    const standingB = groupData.participants.get(pBId);
+
+    if (!standingA || !standingB) return;
+
+    standingA.stats.matchesPlayed++;
+    standingB.stats.matchesPlayed++;
+
+    standingA.stats.pointsFor += match.score.a || 0;
+    standingA.stats.pointsAgainst += match.score.b || 0;
+    standingB.stats.pointsFor += match.score.b || 0;
+    standingB.stats.pointsAgainst += match.score.a || 0;
+
+    if (match.score.a > match.score.b) {
+      standingA.stats.wins++;
+      standingB.stats.losses++;
+    } else if (match.score.b > match.score.a) {
+      standingB.stats.wins++;
+      standingA.stats.losses++;
+    }
+
+    standingA.stats.pointDifference = standingA.stats.pointsFor - standingA.stats.pointsAgainst;
+    standingB.stats.pointDifference = standingB.stats.pointsFor - standingB.stats.pointsAgainst;
+  });
+
+  // Convert to array and sort each group
+  const groupStandings = [];
+  groupStandingsMap.forEach((groupData, groupName) => {
+    const standings = Array.from(groupData.participants.values());
+    // Sort by wins (desc), then point difference (desc)
+    standings.sort((a, b) => {
+      if (b.stats.wins !== a.stats.wins) {
+        return b.stats.wins - a.stats.wins;
+      }
+      return b.stats.pointDifference - a.stats.pointDifference;
+    });
+    
+    standings.forEach((standing, index) => {
+      standing.position = index + 1;
+      standing.group = groupName;
+    });
+    
+    groupStandings.push({
+      groupName,
+      standings
+    });
+  });
+
+  return groupStandings;
+}
+
+/**
+ * Get Top Players from Groups for Progression
+ * 
+ * Returns top N players from each group
+ */
+function getTopPlayersFromGroupsForProgression(groupStandings, topPlayersPerGroup) {
+  const qualified = [];
+
+  groupStandings.forEach(group => {
+    const topN = group.standings.slice(0, topPlayersPerGroup);
+    topN.forEach(standing => {
+      qualified.push({
+        participantId: standing.participant.id,
+        group: group.groupName,
+        position: standing.position
+      });
+    });
+  });
+
+  return qualified;
+}
+
+/**
+ * Fill Knockout Rounds with Qualified Players
+ * 
+ * Fills existing knockout matches (Quarterfinal, Semifinal, Final) with qualified players
+ */
+async function fillKnockoutRoundsWithQualifiedPlayers(knockoutMatches, qualifiedPlayers, tournamentId) {
+  // Group matches by round
+  const matchesByRound = {
+    Quarterfinal: knockoutMatches.filter(m => m.round === 'Quarterfinal'),
+    Semifinal: knockoutMatches.filter(m => m.round === 'Semifinal'),
+    Final: knockoutMatches.filter(m => m.round === 'Final')
+  };
+
+  // Fill Quarterfinal matches first (if exists)
+  if (matchesByRound.Quarterfinal.length > 0) {
+    // Use same-group avoidance logic for quarterfinals
+    const quarterfinalParticipants = qualifiedPlayers.map(qp => qp.participantId);
+    
+    // Group by group name
+    const playersByGroup = new Map();
+    qualifiedPlayers.forEach(qp => {
+      if (!playersByGroup.has(qp.group)) {
+        playersByGroup.set(qp.group, []);
+      }
+      playersByGroup.get(qp.group).push(qp);
+    });
+
+    const groups = Array.from(playersByGroup.keys()).sort();
+    
+    // For 4 groups with 2 players each: A1 vs D2, A2 vs D1, B1 vs C2, B2 vs C1
+    if (groups.length === 4 && qualifiedPlayers.length === 8) {
+      const [groupA, groupB, groupC, groupD] = groups;
+      const playersA = playersByGroup.get(groupA);
+      const playersB = playersByGroup.get(groupB);
+      const playersC = playersByGroup.get(groupC);
+      const playersD = playersByGroup.get(groupD);
+
+      // Fill quarterfinal matches with cross-group pairing
+      if (matchesByRound.Quarterfinal.length >= 4) {
+        // Ensure no same team matches
+        if (playersA[0] && playersD[1] && playersA[0].participantId.toString() !== playersD[1].participantId.toString()) {
+          matchesByRound.Quarterfinal[0].participantA = playersA[0].participantId;
+          matchesByRound.Quarterfinal[0].participantB = playersD[1].participantId;
+          await matchesByRound.Quarterfinal[0].save();
+        }
+
+        if (playersA[1] && playersD[0] && playersA[1].participantId.toString() !== playersD[0].participantId.toString()) {
+          matchesByRound.Quarterfinal[1].participantA = playersA[1].participantId;
+          matchesByRound.Quarterfinal[1].participantB = playersD[0].participantId;
+          await matchesByRound.Quarterfinal[1].save();
+        }
+
+        if (playersB[0] && playersC[1] && playersB[0].participantId.toString() !== playersC[1].participantId.toString()) {
+          matchesByRound.Quarterfinal[2].participantA = playersB[0].participantId;
+          matchesByRound.Quarterfinal[2].participantB = playersC[1].participantId;
+          await matchesByRound.Quarterfinal[2].save();
+        }
+
+        if (playersB[1] && playersC[0] && playersB[1].participantId.toString() !== playersC[0].participantId.toString()) {
+          matchesByRound.Quarterfinal[3].participantA = playersB[1].participantId;
+          matchesByRound.Quarterfinal[3].participantB = playersC[0].participantId;
+          await matchesByRound.Quarterfinal[3].save();
+        }
+      }
+    } else {
+      // Generic pairing for other configurations - ensure no same team matches
+      let playerIndex = 0;
+      for (const match of matchesByRound.Quarterfinal) {
+        if (!match.participantA && playerIndex < quarterfinalParticipants.length) {
+          const pA = quarterfinalParticipants[playerIndex++];
+          match.participantA = pA;
+          await match.save();
+        }
+        if (!match.participantB && playerIndex < quarterfinalParticipants.length) {
+          const pB = quarterfinalParticipants[playerIndex++];
+          // Ensure participantB is different from participantA
+          if (match.participantA && match.participantA.toString() !== pB.toString()) {
+            match.participantB = pB;
+            await match.save();
+          } else if (playerIndex < quarterfinalParticipants.length) {
+            // Skip this one and try next
+            const nextP = quarterfinalParticipants[playerIndex++];
+            if (match.participantA && match.participantA.toString() !== nextP.toString()) {
+              match.participantB = nextP;
+              await match.save();
+            }
+          }
+        }
+      }
+    }
+  } else if (matchesByRound.Semifinal.length > 0 && matchesByRound.Quarterfinal.length === 0) {
+    // Direct semifinal (no quarterfinal) - fill semifinal matches
+    const semifinalParticipants = qualifiedPlayers.map(qp => qp.participantId);
+    let playerIndex = 0;
+    for (const match of matchesByRound.Semifinal) {
+      if (!match.participantA && playerIndex < semifinalParticipants.length) {
+        const pA = semifinalParticipants[playerIndex++];
+        match.participantA = pA;
+        await match.save();
+      }
+      if (!match.participantB && playerIndex < semifinalParticipants.length) {
+        const pB = semifinalParticipants[playerIndex++];
+        // Ensure participantB is different from participantA
+        if (match.participantA && match.participantA.toString() !== pB.toString()) {
+          match.participantB = pB;
+          await match.save();
+        } else if (playerIndex < semifinalParticipants.length) {
+          const nextP = semifinalParticipants[playerIndex++];
+          if (match.participantA && match.participantA.toString() !== nextP.toString()) {
+            match.participantB = nextP;
+            await match.save();
+          }
+        }
+      }
+    }
+  } else if (matchesByRound.Final.length > 0 && matchesByRound.Semifinal.length === 0 && matchesByRound.Quarterfinal.length === 0) {
+    // Direct final - fill final match
+    const finalParticipants = qualifiedPlayers.map(qp => qp.participantId);
+    if (matchesByRound.Final.length > 0) {
+      const finalMatch = matchesByRound.Final[0];
+      if (!finalMatch.participantA && finalParticipants.length > 0) {
+        finalMatch.participantA = finalParticipants[0];
+        await finalMatch.save();
+      }
+      if (!finalMatch.participantB && finalParticipants.length > 1) {
+        const pB = finalParticipants[1];
+        // Ensure participantB is different from participantA
+        if (finalMatch.participantA && finalMatch.participantA.toString() !== pB.toString()) {
+          finalMatch.participantB = pB;
+          await finalMatch.save();
+        }
+      }
+    }
+  }
+
+  // Semifinal and Final will be filled automatically when previous rounds complete
+  // via the existing progression logic
+}
 

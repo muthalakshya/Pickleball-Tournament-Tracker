@@ -202,7 +202,7 @@ const CustomFixtureGenerator = () => {
               <p className="text-gray-600">Create and manage rounds with matches</p>
             </div>
             <Link
-              to={`/admin/tournaments/${id}/manage`}
+              to={`/admin/tournaments/custom/${id}/manage`}
               className="text-navy-blue hover:text-forest-green font-semibold"
             >
               ← Back to Manage
@@ -386,7 +386,7 @@ const CustomFixtureGenerator = () => {
 
                           <div className="mt-3 flex gap-2">
                             <Link
-                              to={`/admin/tournaments/${id}/matches`}
+                              to={`/admin/tournaments/custom/${id}/matches`}
                               className="text-xs text-lime-green hover:text-forest-green font-semibold"
                             >
                               Manage
