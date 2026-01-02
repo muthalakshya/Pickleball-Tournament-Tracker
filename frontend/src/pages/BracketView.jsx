@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { publicAPI } from '../services/api'
+import { getMatchParticipantName } from '../utils/participantDisplay'
 
 const BracketView = () => {
   const { id } = useParams()
@@ -112,7 +113,7 @@ const BracketView = () => {
         <div className="space-y-2">
           <div className={`flex justify-between items-center p-2 rounded-lg ${winnerA ? 'bg-lime-green/30' : ''}`}>
             <span className="text-xs sm:text-sm font-bold text-navy-blue flex-1 truncate">
-              {match.participantA?.name || 'TBD'}
+              {getMatchParticipantName(match.participantA)}
             </span>
             <span className={`text-base sm:text-lg md:text-xl font-bold ml-2 ${
               isLive ? 'text-pink' : 
@@ -124,7 +125,7 @@ const BracketView = () => {
           </div>
           <div className={`flex justify-between items-center p-2 rounded-lg ${winnerB ? 'bg-lime-green/30' : ''}`}>
             <span className="text-xs sm:text-sm font-bold text-navy-blue flex-1 truncate">
-              {match.participantB?.name || 'TBD'}
+              {getMatchParticipantName(match.participantB)}
             </span>
             <span className={`text-base sm:text-lg md:text-xl font-bold ml-2 ${
               isLive ? 'text-pink' : 
@@ -284,8 +285,8 @@ const BracketView = () => {
                   const finalMatch = knockoutByRound[finalRound]?.find(m => m.status === 'completed')
                   if (finalMatch) {
                     const winner = finalMatch.score?.a > finalMatch.score?.b 
-                      ? finalMatch.participantA?.name 
-                      : finalMatch.participantB?.name
+                      ? getMatchParticipantName(finalMatch.participantA)
+                      : getMatchParticipantName(finalMatch.participantB)
                     return (
                       <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-forest-green">
                         {winner || 'TBD'}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { publicAPI } from '../services/api'
+import { getMatchParticipantName } from '../utils/participantDisplay'
 
 const MatchList = () => {
   const { id } = useParams()
@@ -231,13 +232,8 @@ const MatchList = () => {
                               <td className="px-3 sm:px-4 py-3 sm:py-4">
                                 <div className="flex flex-col">
                                   <span className="font-semibold text-navy-blue text-sm sm:text-base">
-                                    {match.participantA?.name || 'TBD'}
+                                    {getMatchParticipantName(match.participantA)}
                                   </span>
-                                  {match.participantA?.players && (
-                                    <span className="text-xs text-gray-600 mt-0.5">
-                                      {match.participantA.players.join(' & ')}
-                                    </span>
-                                  )}
                                 </div>
                               </td>
 
@@ -273,13 +269,8 @@ const MatchList = () => {
                               <td className="px-3 sm:px-4 py-3 sm:py-4 text-right">
                                 <div className="flex flex-col items-end">
                                   <span className="font-semibold text-navy-blue text-sm sm:text-base">
-                                    {match.participantB?.name || 'TBD'}
+                                    {getMatchParticipantName(match.participantB)}
                                   </span>
-                                  {match.participantB?.players && (
-                                    <span className="text-xs text-gray-600 mt-0.5">
-                                      {match.participantB.players.join(' & ')}
-                                    </span>
-                                  )}
                                 </div>
                               </td>
 

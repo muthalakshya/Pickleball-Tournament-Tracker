@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { adminAPI } from '../../services/api'
 import { calculateStandings, sortStandings } from '../../services/standingsService.js'
 import { scrollToTop } from '../../utils/scrollToTop'
+import { getMatchParticipantName, getParticipantDisplayName } from '../../utils/participantDisplay'
 
 const CustomFixtureGenerator = () => {
   const { id } = useParams()
@@ -373,7 +374,7 @@ const CustomFixtureGenerator = () => {
                           <div className="space-y-2 mb-3">
                             <div className="flex justify-between items-center">
                               <span className={`font-semibold text-sm sm:text-base ${!match.participantA ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                                {match.participantA?.name || 'TBD'}
+                                {getMatchParticipantName(match.participantA)}
                               </span>
                               <span className="text-lg sm:text-xl font-bold text-lime-green">
                                 {match.score?.a || 0}
@@ -381,7 +382,7 @@ const CustomFixtureGenerator = () => {
                             </div>
                             <div className="flex justify-between items-center">
                               <span className={`font-semibold text-sm sm:text-base ${!match.participantB ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                                {match.participantB?.name || 'TBD'}
+                                {getMatchParticipantName(match.participantB)}
                               </span>
                               <span className="text-lg sm:text-xl font-bold text-lime-green">
                                 {match.score?.b || 0}
@@ -444,12 +445,7 @@ const CustomFixtureGenerator = () => {
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-left">
                             <div>
-                              <p className="font-semibold text-navy-blue text-sm sm:text-base">{standing.participant.name}</p>
-                              {standing.participant.players && standing.participant.players.length > 0 && (
-                                <p className="text-xs text-gray-500">
-                                  {standing.participant.players.join(' & ')}
-                                </p>
-                              )}
+                              <p className="font-semibold text-navy-blue text-sm sm:text-base">{getParticipantDisplayName(standing.participant)}</p>
                             </div>
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4 text-center hidden sm:table-cell text-sm">{standing.stats.matchesPlayed}</td>

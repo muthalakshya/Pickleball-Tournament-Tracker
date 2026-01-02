@@ -292,7 +292,7 @@ const CustomTournamentCreator = () => {
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
                 <Link
-                  to="/admin/tournaments/custom/list"
+                  to={`/admin/tournaments/custom/${id}/manage`}
                   onClick={scrollToTop}
                   className="btn-secondary text-center text-sm sm:text-base px-6 py-3"
                 >

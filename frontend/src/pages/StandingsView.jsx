@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { publicAPI } from '../services/api'
+import { getParticipantDisplayName } from '../utils/participantDisplay'
 
 const StandingsView = () => {
   const { id } = useParams()
@@ -182,13 +183,8 @@ const StandingsView = () => {
                 </td>
                 <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                   <div className="text-sm sm:text-base font-semibold text-navy-blue">
-                    {standing.participant.name}
+                    {getParticipantDisplayName(standing.participant)}
                   </div>
-                  {standing.participant.players && standing.participant.players.length > 0 && (
-                    <div className="text-xs text-gray-600 mt-0.5">
-                      {standing.participant.players.join(' & ')}
-                    </div>
-                  )}
                 </td>
                 <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center">
                   <span className="text-sm sm:text-base text-gray-700 font-semibold">

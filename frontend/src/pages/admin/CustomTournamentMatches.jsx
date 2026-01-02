@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { adminAPI } from '../../services/api'
 import { scrollToTop } from '../../utils/scrollToTop'
+import { getMatchParticipantName, getParticipantDisplayName } from '../../utils/participantDisplay'
 
 const CustomTournamentMatches = () => {
   const { id } = useParams()
@@ -237,7 +238,7 @@ const CustomTournamentMatches = () => {
                             <div className="space-y-2 mb-3">
                               <div className="flex justify-between items-center">
                                 <span className={`font-semibold text-sm sm:text-base ${!match.participantA ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                                  {match.participantA?.name || 'TBD'}
+                                  {getMatchParticipantName(match.participantA)}
                                 </span>
                                 <span className="text-lg sm:text-xl font-bold text-lime-green">
                                   {match.score?.a || 0}
@@ -245,7 +246,7 @@ const CustomTournamentMatches = () => {
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className={`font-semibold text-sm sm:text-base ${!match.participantB ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                                  {match.participantB?.name || 'TBD'}
+                                  {getMatchParticipantName(match.participantB)}
                                 </span>
                                 <span className="text-lg sm:text-xl font-bold text-lime-green">
                                   {match.score?.b || 0}
@@ -295,7 +296,7 @@ const CustomTournamentMatches = () => {
                             {group.standings.map((standing, idx) => (
                               <tr key={standing.participant.id} className={`border-b ${idx < 2 ? 'bg-lime-green/20' : ''}`}>
                                 <td className="px-2 py-1 font-bold">{standing.position}</td>
-                                <td className="px-2 py-1">{standing.participant.name}</td>
+                                <td className="px-2 py-1">{getParticipantDisplayName(standing.participant)}</td>
                                 <td className="px-2 py-1 text-center">{standing.stats.wins}</td>
                                 <td className="px-2 py-1 text-center">{standing.stats.pointDifference}</td>
                               </tr>
@@ -330,7 +331,7 @@ const CustomTournamentMatches = () => {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-sm sm:text-base text-navy-blue">
-                              {match.participantA?.name || 'TBD'}
+                              {getMatchParticipantName(match.participantA)}
                             </span>
                             <span className="text-lg sm:text-xl font-bold text-lime-green">
                               {match.score?.a || 0}
@@ -338,7 +339,7 @@ const CustomTournamentMatches = () => {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-sm sm:text-base text-navy-blue">
-                              {match.participantB?.name || 'TBD'}
+                              {getMatchParticipantName(match.participantB)}
                             </span>
                             <span className="text-lg sm:text-xl font-bold text-lime-green">
                               {match.score?.b || 0}
@@ -397,7 +398,7 @@ const CustomTournamentMatches = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className={`font-semibold text-sm sm:text-base ${!match.participantA ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                          {match.participantA?.name || 'TBD'}
+                          {getMatchParticipantName(match.participantA)}
                         </span>
                         <span className="text-lg sm:text-xl font-bold text-lime-green">
                           {match.score?.a || 0}
@@ -405,7 +406,7 @@ const CustomTournamentMatches = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className={`font-semibold text-sm sm:text-base ${!match.participantB ? 'italic text-gray-500' : 'text-navy-blue'}`}>
-                          {match.participantB?.name || 'TBD'}
+                          {getMatchParticipantName(match.participantB)}
                         </span>
                         <span className="text-lg sm:text-xl font-bold text-lime-green">
                           {match.score?.b || 0}

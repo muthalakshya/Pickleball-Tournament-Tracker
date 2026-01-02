@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { adminAPI } from '../../services/api'
+import { getMatchParticipantName } from '../../utils/participantDisplay'
 
 const CustomMatchManager = () => {
   const { id } = useParams()
@@ -422,7 +423,7 @@ const CustomMatchManager = () => {
             <div>
               <Link
                 to={`/admin/tournaments/custom/${id}/manage`}
-                className="text-lime-green hover:text-forest-green text-sm mb-1 inline-block"
+                className="text-navy-blue text-base hover:text-forest-green text-sm mb-1 inline-block"
               >
                 ← Back
               </Link>
@@ -526,7 +527,7 @@ const CustomMatchManager = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-600">
-                        {match.participantA?.name || 'TBD'} vs {match.participantB?.name || 'TBD'}
+                        {getMatchParticipantName(match.participantA)} vs {getMatchParticipantName(match.participantB)}
                       </div>
                     </div>
                     
@@ -595,7 +596,7 @@ const CustomMatchManager = () => {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <label className="block text-xs font-medium text-navy-blue mb-1">
-                                  {match.participantA?.name || 'Team A (TBD)'}
+                                  {getMatchParticipantName(match.participantA) || 'Team A (TBD)'}
                                 </label>
                                 <input
                                   type="number"
@@ -614,7 +615,7 @@ const CustomMatchManager = () => {
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-navy-blue mb-1">
-                                  {match.participantB?.name || 'Team B (TBD)'}
+                                  {getMatchParticipantName(match.participantB) || 'Team B (TBD)'}
                                 </label>
                                 <input
                                   type="number"
@@ -658,8 +659,8 @@ const CustomMatchManager = () => {
                       {isCompleted && match.score?.a !== match.score?.b && (
                         <div className="text-xs sm:text-sm text-gray-600 mt-1">
                           Winner: {match.score?.a > match.score?.b 
-                            ? match.participantA?.name || 'Team A'
-                            : match.participantB?.name || 'Team B'}
+                            ? getMatchParticipantName(match.participantA) || 'Team A'
+                            : getMatchParticipantName(match.participantB) || 'Team B'}
                         </div>
                       )}
                     </div>
@@ -724,7 +725,7 @@ const CustomMatchManager = () => {
                       >
                         <option value="">Select A</option>
                         {participants.map(p => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
+                          <option key={p._id} value={p._id}>{getMatchParticipantName(p)}</option>
                         ))}
                       </select>
                     </div>
@@ -739,7 +740,7 @@ const CustomMatchManager = () => {
                       >
                         <option value="">Select B</option>
                         {participants.map(p => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
+                          <option key={p._id} value={p._id}>{getMatchParticipantName(p)}</option>
                         ))}
                       </select>
                     </div>
@@ -837,7 +838,7 @@ const CustomMatchManager = () => {
                       >
                         <option value="">Select A</option>
                         {participants.map(p => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
+                          <option key={p._id} value={p._id}>{getMatchParticipantName(p)}</option>
                         ))}
                       </select>
                     </div>
@@ -852,7 +853,7 @@ const CustomMatchManager = () => {
                       >
                         <option value="">Select B</option>
                         {participants.map(p => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
+                          <option key={p._id} value={p._id}>{getMatchParticipantName(p)}</option>
                         ))}
                       </select>
                     </div>

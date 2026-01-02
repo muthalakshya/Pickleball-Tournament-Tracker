@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { adminAPI } from '../../services/api'
 import { scrollToTop } from '../../utils/scrollToTop'
+import { getParticipantDisplayName } from '../../utils/participantDisplay'
 
 const CustomTournamentManagePage = () => {
   const { id } = useParams()
@@ -76,7 +77,7 @@ const CustomTournamentManagePage = () => {
     setError('')
     setUploadErrors([])
 
-    if (!playerForm.name || !playerForm.player1 || (tournament.type === 'doubles' && !playerForm.player2)) {
+    if (!playerForm.player1 || (tournament.type === 'doubles' && !playerForm.player2)) {
       setError('Please fill in all required player fields.')
       return
     }
@@ -86,12 +87,15 @@ const CustomTournamentManagePage = () => {
       playersArray.push(playerForm.player2.trim())
     }
 
+    // Auto-generate name from players
+    const generatedName = playersArray.join(' & ')
+
     try {
       await adminAPI.createParticipant(id, {
-        name: playerForm.name.trim(),
+        name: generatedName,
         players: playersArray
       })
-      setPlayerForm({ name: '', player1: '', player2: '' })
+      setPlayerForm({ player1: '', player2: '' })
       setShowAddPlayerForm(false)
       fetchTournamentData()
       alert('Player added successfully!')
@@ -460,18 +464,6 @@ const CustomTournamentManagePage = () => {
 
               {showAddPlayerForm && (
                 <form onSubmit={handleAddPlayer} className="space-y-4 mt-4 p-4 sm:p-6 bg-white/40 backdrop-blur-sm rounded-xl">
-                  <div>
-                    <label className="block text-sm font-medium text-navy-blue mb-2">
-                      Team/Player Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={playerForm.name}
-                      onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-lime-green focus:border-lime-green text-sm sm:text-base"
-                      required
-                    />
-                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-navy-blue mb-2">
@@ -566,23 +558,16 @@ const CustomTournamentManagePage = () => {
                   {participants.map((participant) => (
                     <div key={participant._id} className="bg-white/70 backdrop-blur-sm border-2 border-white/30 rounded-xl p-3 sm:p-4 relative hover:shadow-lg transition-all shadow-md">
                       <button
-                        onClick={() => handleDeletePlayer(participant._id, participant.name)}
+                        onClick={() => handleDeletePlayer(participant._id, getParticipantDisplayName(participant))}
                         className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 sm:p-2 transition-all z-10"
                         title="Delete Player"
-                        aria-label={`Delete ${participant.name}`}
+                        aria-label={`Delete ${getParticipantDisplayName(participant)}`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
-                      <h3 className="font-semibold text-navy-blue mb-2 pr-10 sm:pr-12 break-words text-sm sm:text-base">{participant.name}</h3>
-                      {participant.players && participant.players.length > 0 && (
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          {participant.players.map((player, idx) => (
-                            <p key={idx} className="truncate">• {player}</p>
-                          ))}
-                        </div>
-                      )}
+                      <h3 className="font-semibold text-navy-blue mb-2 pr-10 sm:pr-12 break-words text-sm sm:text-base">{getParticipantDisplayName(participant)}</h3>
                     </div>
                   ))}
                 </div>

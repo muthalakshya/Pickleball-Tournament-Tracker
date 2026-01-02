@@ -121,7 +121,7 @@ const Home = () => {
                 className="bg-white/60 backdrop-blur-md rounded-2xl shadow-xl hover:shadow-2xl transition-all border border-white/20 overflow-hidden group"
               >
                 {/* Tournament Header */}
-                <div className="bg-gradient-to-r from-lime-green/80 to-forest-green/80 p-4 sm:p-6">
+                <div className="bg-gradient-to-b from-lime-green/80  to-forest-green/80 p-4 sm:p-6">
                   <div className="flex justify-between items-start mb-3">
                     <h2 className="text-xl sm:text-2xl font-bold text-white flex-1 pr-2 group-hover:scale-105 transition-transform">
                       {tournament.name}
@@ -154,10 +154,10 @@ const Home = () => {
                       <span className="text-gray-700 font-medium capitalize">{tournament.type}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm sm:text-base">
+                    {/* <div className="flex items-center gap-2 text-sm sm:text-base">
                       <span className="text-navy-blue text-lg">⚙️</span>
                       <span className="text-gray-700 font-medium capitalize">{tournament.format}</span>
-                    </div>
+                    </div> */}
 
                     {tournament.currentRound && (
                       <div className="flex items-center gap-2 text-sm sm:text-base">

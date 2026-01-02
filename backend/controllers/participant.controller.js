@@ -134,24 +134,9 @@ const validateAndTransformParticipants = (rawData, tournamentType) => {
       const player1 = row.player1 || row.Player1 || row.PLAYER1 || row['Player 1'] || row['Player1'];
       const player2 = row.player2 || row.Player2 || row.PLAYER2 || row['Player 2'] || row['Player2'];
 
-      // Validation: Name is required
-      if (!name || !name.trim()) {
-        errors.push(`Line ${lineNumber}: Participant name is required`);
-        return;
-      }
-
-      const trimmedName = name.trim();
-
-      // Validation: Check for duplicate names
-      if (seenNames.has(trimmedName.toLowerCase())) {
-        errors.push(`Line ${lineNumber}: Duplicate participant name "${trimmedName}"`);
-        return;
-      }
-      seenNames.add(trimmedName.toLowerCase());
-
       // Validation: Player 1 is required
       if (!player1 || !player1.trim()) {
-        errors.push(`Line ${lineNumber}: Player 1 is required for participant "${trimmedName}"`);
+        errors.push(`Line ${lineNumber}: Player 1 is required`);
         return;
       }
 
@@ -160,7 +145,7 @@ const validateAndTransformParticipants = (rawData, tournamentType) => {
       // Validation: For doubles, player 2 is required
       if (tournamentType === 'doubles') {
         if (!player2 || !player2.trim()) {
-          errors.push(`Line ${lineNumber}: Player 2 is required for doubles tournament. Participant: "${trimmedName}"`);
+          errors.push(`Line ${lineNumber}: Player 2 is required for doubles tournament`);
           return;
         }
         players.push(player2.trim());
@@ -168,6 +153,16 @@ const validateAndTransformParticipants = (rawData, tournamentType) => {
         // Warn if player2 is provided for singles (but don't error)
         // We'll just ignore player2 for singles
       }
+
+      // Auto-generate name from players (name field is optional now)
+      let trimmedName = name && name.trim() ? name.trim() : players.join(' & ');
+
+      // Validation: Check for duplicate names (after generating name)
+      if (seenNames.has(trimmedName.toLowerCase())) {
+        errors.push(`Line ${lineNumber}: Duplicate participant name "${trimmedName}"`);
+        return;
+      }
+      seenNames.add(trimmedName.toLowerCase());
 
       // Create participant object
       validParticipants.push({
@@ -444,13 +439,18 @@ export const createParticipant = async (req, res) => {
       });
     }
 
-    // Validation: Required fields
-    if (!name || !players || !Array.isArray(players) || players.length === 0) {
+    // Validation: Players are required (name will be auto-generated if not provided)
+    if (!players || !Array.isArray(players) || players.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Name and at least one player are required'
+        message: 'At least one player is required'
       });
     }
+
+    // Auto-generate name from players if not provided
+    const generatedName = name && name.trim() 
+      ? name.trim() 
+      : players.map(p => p.trim()).filter(p => p).join(' & ')
 
     // Find tournament and verify ownership
     const tournament = await Tournament.findById(id);
@@ -488,22 +488,22 @@ export const createParticipant = async (req, res) => {
       });
     }
 
-    // Check for duplicate name
+    // Check for duplicate name (using generated name)
     const existingParticipant = await Participant.findOne({
       tournamentId: id,
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+      name: { $regex: new RegExp(`^${generatedName}$`, 'i') }
     });
 
     if (existingParticipant) {
       return res.status(400).json({
         success: false,
-        message: `Participant with name "${name}" already exists in this tournament`
+        message: `Participant with name "${generatedName}" already exists in this tournament`
       });
     }
-
+    
     // Create participant
     const participant = new Participant({
-      name: name.trim(),
+      name: generatedName,
       players: players.map(p => p.trim()).filter(p => p),
       tournamentId: id
     });

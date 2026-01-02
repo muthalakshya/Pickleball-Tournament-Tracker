@@ -5,10 +5,13 @@
  * Use this on button clicks, form submissions, and route changes
  */
 export const scrollToTop = (behavior = 'smooth') => {
+  // Handle event objects passed from onClick handlers
+  const scrollBehavior = typeof behavior === 'string' ? behavior : 'smooth'
+  
   window.scrollTo({
     top: 0,
     left: 0,
-    behavior: behavior
+    behavior: scrollBehavior
   })
 }
 
