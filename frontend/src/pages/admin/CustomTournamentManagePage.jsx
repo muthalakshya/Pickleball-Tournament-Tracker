@@ -256,6 +256,14 @@ const CustomTournamentManagePage = () => {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Link
+            to={`/admin/tournaments/custom/${id}/setup`}
+            className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
+          >
+            <div className="text-2xl mb-2">🎯</div>
+            <div className="font-semibold text-navy-blue">Setup Tournament</div>
+            <div className="text-xs text-gray-600 mt-1">Group or simple format</div>
+          </Link>
+          <Link
             to={`/admin/tournaments/${id}/fixtures`}
             className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
           >
@@ -264,7 +272,7 @@ const CustomTournamentManagePage = () => {
             <div className="text-xs text-gray-600 mt-1">Create rounds & matches</div>
           </Link>
           <Link
-            to={`/admin/tournaments/${id}/matches`}
+            to={`/admin/tournaments/custom/${id}/matches`}
             className="bg-white rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow text-center"
           >
             <div className="text-2xl mb-2">🎾</div>

@@ -107,14 +107,16 @@ export const getNextRoundName = (currentRound) => {
     'Round of 16': 'Quarter Finals',
     'Quarter Finals': 'Semi Finals',
     'Semi Finals': 'Final',
+    'Quarterfinal': 'Semifinal',
+    'Semifinal': 'Final',
     'Final': null // Tournament complete
   };
 
-  // Handle group rounds (e.g., "Group A - Round 1")
-  if (currentRound.includes('Group')) {
-    // For group stages, next round might be "Knockout Stage" or specific round
-    // This would need to be customized based on tournament structure
-    return null; // Groups don't have automatic progression
+  // Handle group rounds (e.g., "Group A")
+  if (currentRound.startsWith('Group ')) {
+    // For group stages, next round is knockout stage (Quarterfinal, Semifinal, or Final)
+    // This is determined by tournament structure, not automatic
+    return null; // Groups don't have automatic progression to knockout
   }
 
   // Handle numbered rounds (e.g., "Round 1", "Round 2")
@@ -358,8 +360,68 @@ export const processMatchCompletion = async (matchId) => {
   const roundComplete = await isRoundComplete(tournament._id, match.round);
   progression.roundComplete = roundComplete;
 
+  // Handle group stage knockout matches (within a group)
+  if (roundComplete && match.round.startsWith('Group ')) {
+    // This is a group stage match - check if we need to generate next round within the group
+    const groupName = match.round.replace('Group ', '');
+    const groupMatches = await Match.find({
+      tournamentId: tournament._id,
+      round: match.round
+    });
+    
+    // Check if all matches in this group round are complete
+    const allComplete = groupMatches.every(m => m.status === 'completed');
+    
+    if (allComplete) {
+      // Get winners from this group round
+      const winners = await getRoundWinners(tournament._id, match.round);
+      
+      // Check if there's a next round in this group (e.g., "Group A - Round 2")
+      // For knockout format within groups, we might have multiple rounds
+      // Check if next round exists or needs to be created
+      const nextGroupRound = `Group ${groupName} - Round 2`; // Assuming round numbering
+      const nextRoundMatches = await Match.find({
+        tournamentId: tournament._id,
+        round: nextGroupRound
+      });
+      
+      if (nextRoundMatches.length > 0) {
+        // Next round exists - auto-fill TBD participants
+        let winnerIndex = 0;
+        for (const nextMatch of nextRoundMatches) {
+          if (!nextMatch.participantA && winnerIndex < winners.length) {
+            nextMatch.participantA = winners[winnerIndex++];
+            await nextMatch.save();
+          }
+          if (!nextMatch.participantB && winnerIndex < winners.length) {
+            nextMatch.participantB = winners[winnerIndex++];
+            await nextMatch.save();
+          }
+        }
+        progression.nextRoundFilled = true;
+        progression.updatedRounds.push(nextGroupRound);
+      } else if (winners.length > 1) {
+        // Next round doesn't exist but we have winners - create it
+        const newMatches = await generateNextRoundMatches(
+          tournament._id,
+          match.round,
+          nextGroupRound
+        );
+        progression.nextRoundGenerated = true;
+        progression.newMatches = newMatches.length;
+        progression.updatedRounds.push(nextGroupRound);
+      } else {
+        // Group knockout complete - winner advances
+        progression.groupRoundComplete = true;
+        progression.groupName = groupName;
+        progression.winner = winners[0];
+      }
+    }
+  }
+
   // If round is complete and it's a knockout tournament, auto-fill TBD participants in next round
-  if (roundComplete && tournament.format === 'knockout') {
+  // Skip group rounds as they're handled above
+  if (roundComplete && (tournament.format === 'knockout' || tournament.format === 'custom') && !match.round.startsWith('Group ')) {
     const nextRound = getNextRoundName(match.round);
 
     if (nextRound) {
@@ -394,8 +456,7 @@ export const processMatchCompletion = async (matchId) => {
         progression.filledMatches = nextRoundMatches.length;
         progression.updatedRounds.push(nextRound);
       } else {
-        // Next round matches don't exist - this shouldn't happen with new fixture generation
-        // But keep old behavior as fallback
+        // Next round matches don't exist - generate them
         const newMatches = await generateNextRoundMatches(
           tournament._id,
           match.round,
@@ -406,11 +467,26 @@ export const processMatchCompletion = async (matchId) => {
         progression.updatedRounds.push(nextRound);
       }
     } else {
-      // No next round - tournament is complete
-      progression.tournamentComplete = true;
-      tournament.status = 'completed';
-      tournament.currentRound = 'Completed';
-      await tournament.save();
+      // Check if this is a group stage completion - might need to generate knockout rounds
+      if (match.round.startsWith('Group ')) {
+        // Group stage complete - check if knockout rounds need to be generated
+        const knockoutMatches = await Match.find({
+          tournamentId: tournament._id,
+          round: { $in: ['Quarterfinal', 'Semifinal', 'Final'] }
+        });
+        
+        if (knockoutMatches.length === 0) {
+          // Knockout rounds not yet generated - admin needs to generate them manually
+          progression.groupStageComplete = true;
+          progression.readyForKnockout = true;
+        }
+      } else {
+        // No next round - tournament is complete
+        progression.tournamentComplete = true;
+        tournament.status = 'completed';
+        tournament.currentRound = 'Completed';
+        await tournament.save();
+      }
     }
   }
 

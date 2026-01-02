@@ -32,6 +32,9 @@ import {
 import { uploadParticipants as uploadMiddleware } from '../middlewares/upload.middleware.js';
 import { generateTournamentFixtures } from '../controllers/fixture.controller.js';
 import { createCustomRound, getCustomRounds } from '../controllers/customFixture.controller.js';
+import { generateGroupTournament } from '../controllers/groupTournament.controller.js';
+import { generateKnockoutRounds } from '../controllers/groupKnockout.controller.js';
+import { getGroupStandings } from '../controllers/groupStandings.controller.js';
 import {
   createMatch,
   updateMatch,
@@ -382,6 +385,85 @@ router.post('/tournaments/:id/custom-round', createCustomRound);
  * }
  */
 router.get('/tournaments/:id/custom-rounds', getCustomRounds);
+
+/**
+ * POST /api/admin/tournaments/:id/generate-group-tournament
+ * 
+ * Generate a complete group-based tournament structure.
+ * 
+ * Request body:
+ * {
+ *   "numGroups": 4,
+ *   "minPlayersPerGroup": 3,
+ *   "maxPlayersPerGroup": 5,
+ *   "tournamentStructure": "quarterfinal", // 'quarterfinal', 'semifinal', 'directFinal'
+ *   "topPlayersPerGroup": 2,
+ *   "stage1Format": "roundRobin" // 'roundRobin', 'knockout'
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Group tournament fixtures generated successfully",
+ *   "data": {
+ *     "tournament": {...},
+ *     "groups": [...],
+ *     "groupDistribution": [4, 4, 4, 5],
+ *     "groupStageMatches": 30,
+ *     "tournamentStructure": "quarterfinal",
+ *     "topPlayersPerGroup": 2,
+ *     "totalQualified": 8
+ *   }
+ * }
+ */
+router.post('/tournaments/:id/generate-group-tournament', generateGroupTournament);
+
+/**
+ * POST /api/admin/tournaments/:id/generate-knockout-rounds
+ * 
+ * Generate knockout rounds (Quarterfinal, Semifinal, Final) after group stage completion.
+ * Ensures teams from same group don't play in quarterfinals.
+ * 
+ * Request body:
+ * {
+ *   "tournamentStructure": "quarterfinal", // 'quarterfinal', 'semifinal', 'directFinal'
+ *   "topPlayersPerGroup": 2
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Knockout rounds generated successfully",
+ *   "data": {
+ *     "qualifiedPlayers": [...],
+ *     "knockoutMatches": 7,
+ *     "tournamentStructure": "quarterfinal"
+ *   }
+ * }
+ */
+router.post('/tournaments/:id/generate-knockout-rounds', generateKnockoutRounds);
+
+/**
+ * GET /api/admin/tournaments/:id/group-standings
+ * 
+ * Get group-wise standings for a tournament.
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "tournament": {...},
+ *     "groupStandings": [
+ *       {
+ *         "groupName": "A",
+ *         "standings": [...]
+ *       }
+ *     ],
+ *     "summary": {...}
+ *   }
+ * }
+ */
+router.get('/tournaments/:id/group-standings', getGroupStandings);
 
 /**
  * GET /api/admin/tournaments/:id/matches

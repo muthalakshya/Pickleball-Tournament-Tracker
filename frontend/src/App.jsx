@@ -16,6 +16,8 @@ import CustomTournamentsViewAll from './pages/admin/CustomTournamentsViewAll'
 import CustomTournamentManage from './pages/admin/CustomTournamentManage'
 import CustomTournamentManagePage from './pages/admin/CustomTournamentManagePage'
 import CustomFixtureGenerator from './pages/admin/CustomFixtureGenerator'
+import GroupTournamentWizard from './pages/admin/GroupTournamentWizard'
+import CustomTournamentMatches from './pages/admin/CustomTournamentMatches'
 import MatchController from './pages/admin/MatchController'
 import ParticipantsManagement from './pages/admin/ParticipantsManagement'
 import FixturesManagement from './pages/admin/FixturesManagement'
@@ -111,6 +113,16 @@ function App() {
             }
           />
           <Route
+            path="/admin/tournaments/custom/:id/setup"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <GroupTournamentWizard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/tournaments/custom/:id/manage"
             element={
               <ProtectedRoute>
@@ -156,6 +168,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CustomFixtureGenerator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/custom/:id/matches"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentMatches />
                 </Layout>
               </ProtectedRoute>
             }

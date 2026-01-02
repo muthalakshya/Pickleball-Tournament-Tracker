@@ -55,6 +55,9 @@ export const adminAPI = {
   generateFixtures: (tournamentId, options) => api.post(`/admin/tournaments/${tournamentId}/generate-fixtures`, options),
   createCustomRound: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/custom-round`, data),
   getCustomRounds: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/custom-rounds`),
+  generateGroupTournament: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/generate-group-tournament`, data),
+  generateKnockoutRounds: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/generate-knockout-rounds`, data),
+  getGroupStandings: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/group-standings`),
   
   // Matches
   getTournamentMatches: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/matches`),
