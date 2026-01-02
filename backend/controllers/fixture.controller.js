@@ -63,6 +63,14 @@ export const generateTournamentFixtures = async (req, res) => {
       });
     }
 
+    // Validation: Custom tournaments should not use auto-generation
+    if (tournament.format === 'custom') {
+      return res.status(400).json({
+        success: false,
+        message: 'Custom tournaments require manual fixture creation. Use the "Create Match" option in the matches page to add fixtures manually.'
+      });
+    }
+
     // Validation: Fixtures can only be generated before tournament goes live
     // Admin override only allowed before tournament goes live
     if (tournament.status === 'live' || tournament.status === 'completed') {

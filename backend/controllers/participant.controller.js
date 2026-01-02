@@ -12,6 +12,7 @@ import csv from 'csv-parser';
 import XLSX from 'xlsx';
 import Tournament from '../models/tournament.model.js';
 import Participant from '../models/participant.model.js';
+import Match from '../models/match.model.js';
 import { deleteUploadedFile } from '../middlewares/upload.middleware.js';
 
 /**
@@ -416,6 +417,224 @@ export const uploadParticipants = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error uploading participants',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Create Single Participant
+ * 
+ * Creates a single participant manually (via form).
+ * Useful for adding participants one at a time.
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const createParticipant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, players } = req.body;
+
+    // Validate MongoDB ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tournament ID format'
+      });
+    }
+
+    // Validation: Required fields
+    if (!name || !players || !Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name and at least one player are required'
+      });
+    }
+
+    // Find tournament and verify ownership
+    const tournament = await Tournament.findById(id);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found'
+      });
+    }
+
+    // Verify admin owns this tournament
+    const adminId = req.admin.id.toString();
+    const tournamentCreatorId = tournament.createdBy.toString();
+    
+    if (tournamentCreatorId !== adminId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to add participants to this tournament'
+      });
+    }
+
+    // Validation: Tournament type vs players
+    if (tournament.type === 'doubles' && players.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Doubles tournaments require exactly 2 players'
+      });
+    }
+
+    if (tournament.type === 'singles' && players.length > 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Singles tournaments can only have 1 player per participant'
+      });
+    }
+
+    // Check for duplicate name
+    const existingParticipant = await Participant.findOne({
+      tournamentId: id,
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+    });
+
+    if (existingParticipant) {
+      return res.status(400).json({
+        success: false,
+        message: `Participant with name "${name}" already exists in this tournament`
+      });
+    }
+
+    // Create participant
+    const participant = new Participant({
+      name: name.trim(),
+      players: players.map(p => p.trim()).filter(p => p),
+      tournamentId: id
+    });
+
+    await participant.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Participant created successfully',
+      data: {
+        participant: participant,
+        tournament: {
+          id: tournament._id,
+          name: tournament.name,
+          type: tournament.type
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error creating participant:', error);
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(e => e.message)
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error creating participant',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete Participant
+ * 
+ * Deletes a participant from a tournament. Only the admin who created the tournament can delete participants.
+ * 
+ * Business Rules:
+ * - Cannot delete participant if they are in any matches (completed, live, or upcoming)
+ * - Prevents breaking tournament integrity
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const deleteParticipant = async (req, res) => {
+  try {
+    const { id, participantId } = req.params;
+
+    // Validate MongoDB ObjectId formats
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tournament ID format'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(participantId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid participant ID format'
+      });
+    }
+
+    // Find tournament and verify ownership
+    const tournament = await Tournament.findById(id);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found'
+      });
+    }
+
+    // Verify admin owns this tournament
+    const adminId = req.admin.id.toString();
+    const tournamentCreatorId = tournament.createdBy.toString();
+    
+    if (tournamentCreatorId !== adminId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to delete participants from this tournament'
+      });
+    }
+
+    // Find participant
+    const participant = await Participant.findOne({
+      _id: participantId,
+      tournamentId: id
+    });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Participant not found in this tournament'
+      });
+    }
+
+    // Check if participant is in any matches
+    const matchesWithParticipant = await Match.find({
+      tournamentId: id,
+      $or: [
+        { participantA: participantId },
+        { participantB: participantId }
+      ]
+    });
+
+    if (matchesWithParticipant.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete participant. They are involved in ${matchesWithParticipant.length} match(es). Please delete or update those matches first.`,
+        matchesCount: matchesWithParticipant.length
+      });
+    }
+
+    // Delete participant
+    await Participant.findByIdAndDelete(participantId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Participant deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting participant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting participant',
       error: error.message
     });
   }

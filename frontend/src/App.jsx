@@ -10,6 +10,12 @@ import StandingsView from './pages/StandingsView'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import TournamentEditor from './pages/admin/TournamentEditor'
+import CustomTournamentCreator from './pages/admin/CustomTournamentCreator'
+import CustomTournamentsList from './pages/admin/CustomTournamentsList'
+import CustomTournamentsViewAll from './pages/admin/CustomTournamentsViewAll'
+import CustomTournamentManage from './pages/admin/CustomTournamentManage'
+import CustomTournamentManagePage from './pages/admin/CustomTournamentManagePage'
+import CustomFixtureGenerator from './pages/admin/CustomFixtureGenerator'
 import MatchController from './pages/admin/MatchController'
 import ParticipantsManagement from './pages/admin/ParticipantsManagement'
 import FixturesManagement from './pages/admin/FixturesManagement'
@@ -53,6 +59,46 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/tournaments/custom/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentCreator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/custom"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentCreator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/custom/list"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentsViewAll />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/custom/view-all"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentsViewAll />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           {/* More specific routes must come before the general :id route */}
           <Route
             path="/admin/tournaments/:id/participants"
@@ -65,11 +111,51 @@ function App() {
             }
           />
           <Route
+            path="/admin/tournaments/custom/:id/manage"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentManagePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/tournaments/:id/fixtures"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <FixturesManagement />
+                  <CustomFixtureGenerator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/:id/manage"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentManage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route // New dedicated route for managing custom tournaments
+            path="/admin/tournaments/custom/:id/manage"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomTournamentManagePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tournaments/:id/fixtures"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CustomFixtureGenerator />
                 </Layout>
               </ProtectedRoute>
             }

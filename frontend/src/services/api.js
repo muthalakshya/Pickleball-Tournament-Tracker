@@ -31,6 +31,7 @@ export const adminAPI = {
   
   // Tournaments
   getTournaments: () => api.get('/admin/tournaments'),
+  getCustomTournaments: () => api.get('/admin/tournaments/custom'),
   getTournament: (id) => api.get(`/admin/tournaments/${id}`),
   createTournament: (data) => api.post('/admin/tournaments', data),
   updateTournament: (id, data) => api.put(`/admin/tournaments/${id}`, data),
@@ -40,6 +41,8 @@ export const adminAPI = {
   
   // Participants
   getTournamentParticipants: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/participants`),
+  createParticipant: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/participants`, data),
+  deleteParticipant: (tournamentId, participantId) => api.delete(`/admin/tournaments/${tournamentId}/participants/${participantId}`),
   uploadParticipants: (tournamentId, file) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -50,6 +53,8 @@ export const adminAPI = {
   
   // Fixtures
   generateFixtures: (tournamentId, options) => api.post(`/admin/tournaments/${tournamentId}/generate-fixtures`, options),
+  createCustomRound: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/custom-round`, data),
+  getCustomRounds: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/custom-rounds`),
   
   // Matches
   getTournamentMatches: (tournamentId) => api.get(`/admin/tournaments/${tournamentId}/matches`),

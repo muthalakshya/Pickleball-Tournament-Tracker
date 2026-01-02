@@ -34,7 +34,7 @@ import { emitTournamentLive } from '../services/socket.service.js';
  */
 export const createTournament = async (req, res) => {
   try {
-    const { name, type, format, rules, currentRound, isPublic } = req.body;
+    const { name, location, date, type, format, rules, currentRound, isPublic } = req.body;
 
     // Validation: Required fields
     if (!name || !type || !format) {
@@ -53,10 +53,10 @@ export const createTournament = async (req, res) => {
     }
 
     // Validation: Tournament format
-    if (!['group', 'roundRobin', 'knockout'].includes(format)) {
+    if (!['group', 'roundRobin', 'knockout', 'custom'].includes(format)) {
       return res.status(400).json({
         success: false,
-        message: 'Tournament format must be "group", "roundRobin", or "knockout"'
+        message: 'Tournament format must be "group", "roundRobin", "knockout", or "custom"'
       });
     }
 
@@ -80,6 +80,8 @@ export const createTournament = async (req, res) => {
     // Create tournament (always as draft)
     const tournament = new Tournament({
       name: name.trim(),
+      location: location?.trim() || null,
+      date: date ? new Date(date) : null,
       type,
       format,
       rules: {
@@ -89,7 +91,7 @@ export const createTournament = async (req, res) => {
       status: 'draft', // Always create as draft
       currentRound: currentRound?.trim() || null,
       createdBy: req.admin.id, // Set from authenticated admin
-      isPublic: isPublic !== undefined ? isPublic : true
+      isPublic: isPublic !== undefined ? isPublic : false // Default to draft (not published)
     });
 
     await tournament.save();
@@ -135,7 +137,7 @@ export const createTournament = async (req, res) => {
 export const updateTournament = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type, format, rules, currentRound, isPublic } = req.body;
+    const { name, location, date, type, format, rules, currentRound, isPublic } = req.body;
 
     // Validate MongoDB ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -175,6 +177,14 @@ export const updateTournament = async (req, res) => {
       });
     }
 
+    // Validation: Format cannot be changed if tournament is not in draft
+    if (format && tournament.status !== 'draft' && format !== tournament.format) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tournament format can only be changed when tournament is in draft status'
+      });
+    }
+
     // Validation: Type and format (if provided)
     if (type && !['singles', 'doubles'].includes(type)) {
       return res.status(400).json({
@@ -183,20 +193,23 @@ export const updateTournament = async (req, res) => {
       });
     }
 
-    if (format && !['group', 'roundRobin', 'knockout'].includes(format)) {
+    if (format && !['group', 'roundRobin', 'knockout', 'custom'].includes(format)) {
       return res.status(400).json({
         success: false,
-        message: 'Tournament format must be "group", "roundRobin", or "knockout"'
+        message: 'Tournament format must be "group", "roundRobin", "knockout", or "custom"'
       });
     }
 
     // Validation: Rules (if provided and tournament is draft)
     if (rules && tournament.status === 'draft') {
-      if (rules.points && ![11, 15].includes(rules.points)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Points must be either 11 or 15'
-        });
+      if (rules.points !== undefined) {
+        const pointsValue = typeof rules.points === 'string' ? parseInt(rules.points) : rules.points;
+        if (![11, 15].includes(pointsValue)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Points must be either 11 or 15'
+          });
+        }
       }
 
       if (rules.scoringSystem && !['rally', 'pickleball'].includes(rules.scoringSystem)) {
@@ -209,6 +222,8 @@ export const updateTournament = async (req, res) => {
 
     // Update allowed fields
     if (name !== undefined) tournament.name = name.trim();
+    if (location !== undefined) tournament.location = location?.trim() || null;
+    if (date !== undefined) tournament.date = date ? new Date(date) : null;
     if (type !== undefined) tournament.type = type;
     if (format !== undefined) tournament.format = format;
     if (currentRound !== undefined) tournament.currentRound = currentRound?.trim() || null;
@@ -216,7 +231,9 @@ export const updateTournament = async (req, res) => {
 
     // Update rules only if tournament is draft
     if (rules && tournament.status === 'draft') {
-      if (rules.points !== undefined) tournament.rules.points = rules.points;
+      if (rules.points !== undefined) {
+        tournament.rules.points = typeof rules.points === 'string' ? parseInt(rules.points) : rules.points;
+      }
       if (rules.scoringSystem !== undefined) tournament.rules.scoringSystem = rules.scoringSystem;
     }
 
@@ -357,6 +374,40 @@ export const getAllTournaments = async (req, res) => {
 };
 
 /**
+ * Get Custom Tournaments
+ * 
+ * Gets all tournaments with format = 'custom' created by this admin.
+ * Sorted by creation date (newest first).
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getCustomTournaments = async (req, res) => {
+  try {
+    // Get all custom tournaments created by this admin
+    const tournaments = await Tournament.find({ 
+      createdBy: req.admin.id,
+      format: 'custom'
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: tournaments,
+      count: tournaments.length
+    });
+  } catch (error) {
+    console.error('Error fetching custom tournaments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching custom tournaments',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Get Tournament by ID
  * 
  * Gets a single tournament by ID. Only the admin who created it can view it.
@@ -456,10 +507,10 @@ export const updateTournamentStatus = async (req, res) => {
     }
 
     // Validation: Status must be valid enum value
-    if (!['draft', 'live', 'completed'].includes(status)) {
+    if (!['draft', 'comingSoon', 'live', 'delayed', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Status must be "draft", "live", or "completed"'
+        message: 'Status must be "draft", "comingSoon", "live", "delayed", "completed", or "cancelled"'
       });
     }
 
@@ -486,26 +537,21 @@ export const updateTournamentStatus = async (req, res) => {
     }
 
     // Validation: Status transition rules
+    // For custom tournaments, allow more flexible status changes
     const currentStatus = tournament.status;
     
-    if (currentStatus === 'completed') {
+    // Completed and cancelled tournaments cannot be changed (except by admin override)
+    if (currentStatus === 'completed' && status !== 'completed') {
       return res.status(400).json({
         success: false,
         message: 'Cannot change status of a completed tournament'
       });
     }
 
-    if (currentStatus === 'live' && status === 'draft') {
+    if (currentStatus === 'cancelled' && status !== 'cancelled') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot revert a live tournament back to draft status'
-      });
-    }
-
-    if (currentStatus === 'draft' && status === 'completed') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot mark a draft tournament as completed. Tournament must be live first.'
+        message: 'Cannot change status of a cancelled tournament'
       });
     }
 

@@ -485,23 +485,39 @@ export const createMatch = async (req, res) => {
     }
 
     // Validation: Required fields
-    if (!round || !participantA || !participantB) {
+    // Round is required, but participants can be null for TBD slots
+    if (!round) {
       return res.status(400).json({
         success: false,
-        message: 'Round, participantA, and participantB are required'
+        message: 'Round is required'
       });
     }
 
-    // Validate participant IDs
-    if (!mongoose.Types.ObjectId.isValid(participantA) || !mongoose.Types.ObjectId.isValid(participantB)) {
+    // At least one participant must be provided (or both can be null for TBD vs TBD)
+    if (participantA === undefined && participantB === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid participant ID format'
+        message: 'At least one participant must be provided, or both can be null for TBD'
       });
     }
 
-    // Validation: Participants must be different
-    if (participantA === participantB) {
+    // Validate participant IDs if provided (allow null for TBD)
+    if (participantA !== null && participantA !== undefined && !mongoose.Types.ObjectId.isValid(participantA)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid participantA ID format'
+      });
+    }
+
+    if (participantB !== null && participantB !== undefined && !mongoose.Types.ObjectId.isValid(participantB)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid participantB ID format'
+      });
+    }
+
+    // Validation: Participants must be different if both are provided and not null
+    if (participantA && participantB && participantA === participantB) {
       return res.status(400).json({
         success: false,
         message: 'Participant A and Participant B must be different'
@@ -529,25 +545,53 @@ export const createMatch = async (req, res) => {
       });
     }
 
-    // Validation: Admin override only allowed before tournament goes live
-    if (tournament.status === 'live' || tournament.status === 'completed') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot create matches in live/completed tournaments. Only draft tournaments allow manual match creation.'
-      });
+    // Validation: For custom tournaments, allow match creation in any status except completed
+    // For other formats, only allow in draft
+    if (tournament.format !== 'custom') {
+      if (tournament.status === 'live' || tournament.status === 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot create matches in live/completed tournaments. Only draft tournaments allow manual match creation.'
+        });
+      }
+    } else {
+      // Custom tournaments: allow in draft, comingSoon, live, delayed, but not completed
+      if (tournament.status === 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot create matches in completed tournaments.'
+        });
+      }
     }
 
-    // Verify participants belong to this tournament
-    const participants = await Participant.find({
-      _id: { $in: [participantA, participantB] },
-      tournamentId: tournamentId
-    });
-
-    if (participants.length !== 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Both participants must belong to this tournament'
+    // Verify participants belong to this tournament (if both are provided)
+    // Allow null participants for TBD slots in custom tournaments
+    if (participantA && participantB) {
+      const participants = await Participant.find({
+        _id: { $in: [participantA, participantB] },
+        tournamentId: tournamentId
       });
+
+      if (participants.length !== 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Both participants must belong to this tournament'
+        });
+      }
+    } else if (participantA || participantB) {
+      // If only one participant is provided, verify it belongs to tournament
+      const participantId = participantA || participantB
+      const participant = await Participant.findOne({
+        _id: participantId,
+        tournamentId: tournamentId
+      });
+
+      if (!participant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Participant must belong to this tournament'
+        });
+      }
     }
 
     // Create match

@@ -16,6 +16,7 @@ import { authenticateAdmin } from '../middlewares/auth.middleware.js';
 import {
   createTournament,
   getAllTournaments,
+  getCustomTournaments,
   getTournament,
   updateTournament,
   deleteTournament,
@@ -24,10 +25,13 @@ import {
 } from '../controllers/admin.controller.js';
 import { 
   uploadParticipants as uploadParticipantsController,
-  getTournamentParticipants
+  getTournamentParticipants,
+  createParticipant,
+  deleteParticipant
 } from '../controllers/participant.controller.js';
 import { uploadParticipants as uploadMiddleware } from '../middlewares/upload.middleware.js';
 import { generateTournamentFixtures } from '../controllers/fixture.controller.js';
+import { createCustomRound, getCustomRounds } from '../controllers/customFixture.controller.js';
 import {
   createMatch,
   updateMatch,
@@ -87,6 +91,21 @@ router.post('/tournaments', createTournament);
  * }
  */
 router.get('/tournaments', getAllTournaments);
+
+/**
+ * GET /api/admin/tournaments/custom
+ * 
+ * Get all custom tournaments (format = 'custom') created by the authenticated admin.
+ * Sorted by creation date (newest first).
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": [...],
+ *   "count": 5
+ * }
+ */
+router.get('/tournaments/custom', getCustomTournaments);
 
 /**
  * GET /api/admin/tournaments/:id
@@ -196,6 +215,45 @@ router.patch('/tournaments/:id/toggle-public', toggleTournamentPublic);
 router.get('/tournaments/:id/participants', getTournamentParticipants);
 
 /**
+ * POST /api/admin/tournaments/:id/participants
+ * 
+ * Create a single participant manually (via form).
+ * 
+ * Request body:
+ * {
+ *   "name": "Team A",
+ *   "players": ["John Doe", "Jane Doe"]  // For doubles
+ *   // OR
+ *   "players": ["John Doe"]  // For singles
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Participant created successfully",
+ *   "data": {
+ *     "participant": {...},
+ *     "tournament": {...}
+ *   }
+ * }
+ */
+router.post('/tournaments/:id/participants', createParticipant);
+
+/**
+ * DELETE /api/admin/tournaments/:id/participants/:participantId
+ * 
+ * Delete a participant from a tournament.
+ * Cannot delete if participant is involved in any matches.
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Participant deleted successfully"
+ * }
+ */
+router.delete('/tournaments/:id/participants/:participantId', deleteParticipant);
+
+/**
  * POST /api/admin/tournaments/:id/upload-participants
  * 
  * Bulk upload participants from CSV or Excel file.
@@ -274,6 +332,56 @@ router.post(
  * }
  */
 router.post('/tournaments/:id/generate-fixtures', generateTournamentFixtures);
+
+/**
+ * POST /api/admin/tournaments/:id/custom-round
+ * 
+ * Create a custom round with matches for custom tournaments.
+ * Randomly pairs participants, handles odd numbers with TBD.
+ * 
+ * Request body:
+ * {
+ *   "roundName": "Round 1",
+ *   "participantIds": ["...", "..."],  // Optional: for subsequent rounds
+ *   "topPlayers": 4  // Optional: number of top players to advance
+ * }
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Successfully created 5 match(es) for round \"Round 1\"",
+ *   "data": {
+ *     "round": "Round 1",
+ *     "matches": [...],
+ *     "count": 5,
+ *     "hasTBD": false
+ *   }
+ * }
+ */
+router.post('/tournaments/:id/custom-round', createCustomRound);
+
+/**
+ * GET /api/admin/tournaments/:id/custom-rounds
+ * 
+ * Get all rounds with matches grouped by round name for custom tournaments.
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "tournament": {...},
+ *     "rounds": [
+ *       {
+ *         "roundName": "Round 1",
+ *         "matches": [...],
+ *         "stats": {...}
+ *       }
+ *     ],
+ *     "summary": {...}
+ *   }
+ * }
+ */
+router.get('/tournaments/:id/custom-rounds', getCustomRounds);
 
 /**
  * GET /api/admin/tournaments/:id/matches

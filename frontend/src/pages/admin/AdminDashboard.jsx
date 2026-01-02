@@ -61,8 +61,11 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Welcome, {admin?.email}</p>
         </div>
         <div className="flex gap-4">
-          <Link to="/admin/tournaments/new" className="btn-primary">
-            Create Tournament
+          <Link to="/admin/tournaments/new" className="btn-secondary">
+            Quick Create
+          </Link>
+          <Link to="/admin/tournaments/custom/list" className="btn-primary">
+            ⚙️ Custom Tournaments
           </Link>
           <button onClick={handleLogout} className="btn-secondary">
             Logout

@@ -16,6 +16,15 @@ const tournamentSchema = new mongoose.Schema(
       trim: true,
       maxlength: [200, 'Tournament name cannot exceed 200 characters']
     },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Location cannot exceed 200 characters']
+    },
+    date: {
+      type: Date,
+      // Tournament date/start date
+    },
     type: {
       type: String,
       enum: ['singles', 'doubles'],
@@ -25,7 +34,7 @@ const tournamentSchema = new mongoose.Schema(
     },
     format: {
       type: String,
-      enum: ['group', 'roundRobin', 'knockout'],
+      enum: ['group', 'roundRobin', 'knockout', 'custom'],
       required: [true, 'Tournament format is required']
     },
     rules: {
@@ -44,7 +53,7 @@ const tournamentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'live', 'completed'],
+      enum: ['draft', 'comingSoon', 'live', 'delayed', 'completed', 'cancelled'],
       default: 'draft',
       required: true,
       // Index for filtering live/completed tournaments (very common public query)
